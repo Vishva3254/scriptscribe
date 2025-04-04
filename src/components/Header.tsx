@@ -8,24 +8,24 @@ const Header: React.FC = () => {
   const isMobile = useIsMobile();
   
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-10">
-      <div className="container mx-auto px-2 py-2 sm:px-4 sm:py-4">
+    <header className="bg-white shadow-sm border-b sticky top-0 z-10 w-full">
+      <div className="container mx-auto px-3 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <FileText className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-medical-500" />
+              <FileText className="h-5 w-5 text-medical-500" />
             </div>
             <div className="ml-2">
-              <h1 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">ScriptScribe</h1>
-              <p className="text-xs text-gray-500 hidden sm:block">Voice-to-Text Prescription Assistant</p>
+              <h1 className="text-sm font-semibold text-gray-900">ScriptScribe</h1>
+              <p className="text-xs text-gray-500 hidden xs:block">Voice-to-Text</p>
             </div>
           </div>
           
           {isMobile ? (
             <Sheet>
               <SheetTrigger asChild>
-                <button className="p-1.5 rounded-md hover:bg-gray-100 focus:outline-none">
-                  <Menu size={18} />
+                <button className="p-1 rounded-md hover:bg-gray-100 focus:outline-none">
+                  <Menu size={16} />
                   <span className="sr-only">Menu</span>
                 </button>
               </SheetTrigger>

@@ -95,12 +95,12 @@ const Index = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50 w-full max-w-full overflow-x-hidden">
       <Header />
       
-      <main className="flex-grow w-full px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-5">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-800 mb-2 sm:mb-3 md:mb-4">Create Prescription</h2>
+      <main className="flex-grow w-full px-3 py-3">
+        <div className="w-full max-w-4xl mx-auto">
+          <h2 className="text-base font-bold text-gray-800 mb-3">Create Prescription</h2>
           
           <PatientInfoCard 
             updatePatientInfo={updatePatientInfo}
@@ -118,9 +118,9 @@ const Index = () => {
             updateMedication={updateMedication}
           />
           
-          <div className="mt-3 sm:mt-4 flex justify-center sm:justify-end">
-            <Button onClick={generatePrescription} size="sm" className="w-full sm:w-auto sm:text-sm md:text-base">
-              <FileText className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <div className="mt-3 flex justify-center sm:justify-end">
+            <Button onClick={generatePrescription} size="sm" className="w-full sm:w-auto text-sm">
+              <FileText className="mr-1.5 h-3.5 w-3.5" />
               Generate Prescription
             </Button>
           </div>

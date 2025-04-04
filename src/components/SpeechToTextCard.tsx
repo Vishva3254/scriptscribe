@@ -62,12 +62,12 @@ const SpeechToTextCard: React.FC<SpeechToTextCardProps> = ({ updatePrescriptionT
   };
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-4 w-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg text-medical-700">
+        <CardTitle className="text-sm sm:text-base text-medical-700">
           Prescription
           {isListening && (
-            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 animate-pulse-light">
+            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 animate-pulse-light">
               Recording
             </span>
           )}
@@ -76,29 +76,28 @@ const SpeechToTextCard: React.FC<SpeechToTextCardProps> = ({ updatePrescriptionT
       <CardContent>
         <Textarea
           placeholder="Click the microphone button below to start dictating your prescription, or type directly here..."
-          className="min-h-[200px] resize-y"
+          className="min-h-[150px] sm:min-h-[200px] resize-y text-xs sm:text-sm"
           value={localText}
           onChange={handleTextChange}
         />
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <div>
-          <Button 
-            onClick={toggleRecording} 
-            variant={isListening ? "destructive" : "default"}
-            className={isListening ? "bg-red-500 hover:bg-red-600" : ""}
-          >
-            {isListening ? <MicOff className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
-            {isListening ? "Stop Recording" : "Start Recording"}
-          </Button>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={copyToClipboard}>
-            <Clipboard className="mr-2 h-4 w-4" />
+      <CardFooter className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0">
+        <Button 
+          onClick={toggleRecording} 
+          variant={isListening ? "destructive" : "default"}
+          className={`${isListening ? "bg-red-500 hover:bg-red-600" : ""} text-xs h-8 w-full sm:w-auto`}
+          size="sm"
+        >
+          {isListening ? <MicOff className="mr-1.5 h-3 w-3" /> : <Mic className="mr-1.5 h-3 w-3" />}
+          {isListening ? "Stop Recording" : "Start Recording"}
+        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={copyToClipboard} className="text-xs h-8 flex-1 sm:flex-initial">
+            <Clipboard className="mr-1.5 h-3 w-3" />
             Copy
           </Button>
-          <Button variant="outline">
-            <FileText className="mr-2 h-4 w-4" />
+          <Button variant="outline" className="text-xs h-8 flex-1 sm:flex-initial">
+            <FileText className="mr-1.5 h-3 w-3" />
             Export
           </Button>
         </div>
