@@ -98,9 +98,9 @@ const Index = () => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header />
       
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <main className="flex-grow container mx-auto px-3 py-4 sm:px-4 sm:py-6 md:py-8">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Prescription</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Create Prescription</h2>
           
           <PatientInfoCard 
             updatePatientInfo={updatePatientInfo}
@@ -118,10 +118,10 @@ const Index = () => {
             updateMedication={updateMedication}
           />
           
-          <div className="mt-6 flex justify-end">
-            <Button onClick={generatePrescription} size="lg">
+          <div className="mt-4 sm:mt-6 flex justify-center sm:justify-end">
+            <Button onClick={generatePrescription} size="lg" className="w-full sm:w-auto">
               <FileText className="mr-2 h-4 w-4" />
-              Generate Complete Prescription
+              Generate Prescription
             </Button>
           </div>
         </div>

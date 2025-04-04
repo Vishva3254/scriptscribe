@@ -21,7 +21,7 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({ updatePatientInfo, pa
         <CardTitle className="text-lg text-medical-700">Patient Information</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="patientName">Patient Name</Label>
             <Input 
@@ -29,6 +29,7 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({ updatePatientInfo, pa
               placeholder="Enter patient name"
               value={patientInfo.name}
               onChange={(e) => updatePatientInfo('name', e.target.value)}
+              className="w-full"
             />
           </div>
           <div className="space-y-2">
@@ -38,6 +39,7 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({ updatePatientInfo, pa
               placeholder="Enter age"
               value={patientInfo.age}
               onChange={(e) => updatePatientInfo('age', e.target.value)}
+              className="w-full"
             />
           </div>
           <div className="space-y-2">
@@ -47,6 +49,7 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({ updatePatientInfo, pa
               placeholder="Enter gender"
               value={patientInfo.gender}
               onChange={(e) => updatePatientInfo('gender', e.target.value)}
+              className="w-full"
             />
           </div>
           <div className="space-y-2">
@@ -56,6 +59,7 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({ updatePatientInfo, pa
               placeholder="Enter contact number"
               value={patientInfo.contactNumber}
               onChange={(e) => updatePatientInfo('contactNumber', e.target.value)}
+              className="w-full"
             />
           </div>
         </div>
