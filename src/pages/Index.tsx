@@ -98,9 +98,9 @@ const Index = () => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header />
       
-      <main className="flex-grow container mx-auto px-3 py-4 sm:px-4 sm:py-6 md:py-8">
+      <main className="flex-grow w-full px-2 py-3 sm:px-3 sm:py-4 md:px-4 md:py-6">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Create Prescription</h2>
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 md:mb-6">Create Prescription</h2>
           
           <PatientInfoCard 
             updatePatientInfo={updatePatientInfo}
