@@ -1,17 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Menu, UserRound, LogOut } from 'lucide-react';
+import { FileText, Menu, UserRound, LogOut, Settings } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserInfo {
   name: string;
   email: string;
   clinicName: string;
+  profilePic?: string | null;
   isLoggedIn: boolean;
 }
 
@@ -116,14 +117,22 @@ const Header: React.FC = () => {
                         <div className="block px-3 py-2.5">
                           <div className="flex items-center space-x-2">
                             <Avatar className="h-6 w-6">
-                              <AvatarFallback className="bg-medical-100 text-medical-800 text-xs">
-                                {getInitials(user.name)}
-                              </AvatarFallback>
+                              {user.profilePic ? (
+                                <AvatarImage src={user.profilePic} alt={user.name} />
+                              ) : (
+                                <AvatarFallback className="bg-medical-100 text-medical-800 text-xs">
+                                  {getInitials(user.name)}
+                                </AvatarFallback>
+                              )}
                             </Avatar>
                             <span className="text-sm font-medium">{user.name}</span>
                           </div>
                           <div className="text-xs text-gray-500 mt-1">{user.clinicName}</div>
                         </div>
+                        <Link to="/profile" className="flex items-center w-full text-left px-3 py-2.5 hover:bg-gray-100">
+                          <Settings className="h-3.5 w-3.5 mr-2 text-gray-500" />
+                          <span className="text-sm text-gray-700">My Profile</span>
+                        </Link>
                         <button 
                           onClick={handleLogout}
                           className="flex items-center w-full text-left px-3 py-2.5 hover:bg-gray-100"
@@ -156,11 +165,17 @@ const Header: React.FC = () => {
                     <div className="text-sm font-medium">{user.name}</div>
                     <div className="text-xs text-gray-500">{user.clinicName}</div>
                   </div>
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-medical-100 text-medical-800 text-xs">
-                      {getInitials(user.name)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <Link to="/profile">
+                    <Avatar className="h-8 w-8 cursor-pointer">
+                      {user.profilePic ? (
+                        <AvatarImage src={user.profilePic} alt={user.name} />
+                      ) : (
+                        <AvatarFallback className="bg-medical-100 text-medical-800 text-xs">
+                          {getInitials(user.name)}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                  </Link>
                   <Button 
                     variant="ghost" 
                     size="sm" 
