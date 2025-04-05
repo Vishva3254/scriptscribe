@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { FileText } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface SignupFormValues {
   doctorName: string;
@@ -21,7 +22,7 @@ interface SignupFormValues {
 }
 
 const Signup = () => {
-  const navigate = useNavigate();
+  const { signUp } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -36,7 +37,7 @@ const Signup = () => {
     },
   });
 
-  const onSubmit = (values: SignupFormValues) => {
+  const onSubmit = async (values: SignupFormValues) => {
     if (values.password !== values.confirmPassword) {
       toast({
         title: "Passwords don't match",
@@ -48,26 +49,18 @@ const Signup = () => {
 
     setIsLoading(true);
     
-    // In a real app, you would send this to your backend
-    console.log('Signup details:', values);
-    
-    // Demo: Store in localStorage
-    localStorage.setItem('user', JSON.stringify({
-      name: values.doctorName,
-      email: values.email,
-      clinicName: values.clinicName,
-      address: values.address,
-      isLoggedIn: true
-    }));
-    
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Account created",
-        description: "Welcome to ScriptScribe",
+    try {
+      await signUp(values.email, values.password, {
+        name: values.doctorName,
+        email: values.email,
+        clinicName: values.clinicName,
+        address: values.address,
       });
-      navigate('/');
-    }, 1000);
+    } catch (error) {
+      console.error('Signup error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
