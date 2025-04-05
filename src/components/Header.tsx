@@ -1,17 +1,23 @@
 
 import React from 'react';
-import { FileText, Menu } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { FileText, Menu, UserRound } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 
 const Header: React.FC = () => {
   const isMobile = useIsMobile();
+  const location = useLocation();
+  const isLoggedIn = false; // In a real app, this would be from auth state
+  
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
   
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-10 w-full">
       <div className="container mx-auto px-3 py-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
+          <Link to="/" className="flex items-center">
             <div className="flex-shrink-0">
               <FileText className="h-5 w-5 text-medical-500" />
             </div>
@@ -19,7 +25,7 @@ const Header: React.FC = () => {
               <h1 className="text-sm font-semibold text-gray-900">ScriptScribe</h1>
               <p className="text-xs text-gray-500 hidden xs:block">Voice-to-Text</p>
             </div>
-          </div>
+          </Link>
           
           {isMobile ? (
             <Sheet>
@@ -38,12 +44,28 @@ const Header: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex-1 overflow-auto py-2">
-                    <div className="px-3 py-2.5 hover:bg-gray-100">
-                      <span className="text-sm font-medium text-gray-700">Dr. Assistant</span>
-                    </div>
-                    <div className="px-3 py-2.5 hover:bg-gray-100">
-                      <span className="text-sm text-gray-700">Help</span>
-                    </div>
+                    <Link to="/" className="block px-3 py-2.5 hover:bg-gray-100">
+                      <span className="text-sm font-medium text-gray-700">Prescriptions</span>
+                    </Link>
+                    {!isLoggedIn ? (
+                      <>
+                        <Link to="/login" className="block px-3 py-2.5 hover:bg-gray-100">
+                          <span className="text-sm text-gray-700">Login</span>
+                        </Link>
+                        <Link to="/signup" className="block px-3 py-2.5 hover:bg-gray-100">
+                          <span className="text-sm text-gray-700">Sign Up</span>
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link to="/profile" className="block px-3 py-2.5 hover:bg-gray-100">
+                          <span className="text-sm text-gray-700">Profile</span>
+                        </Link>
+                        <div className="block px-3 py-2.5 hover:bg-gray-100">
+                          <span className="text-sm text-gray-700">Logout</span>
+                        </div>
+                      </>
+                    )}
                     <div className="px-3 py-2.5 hover:bg-gray-100">
                       <span className="text-sm text-gray-700">Settings</span>
                     </div>
@@ -52,8 +74,24 @@ const Header: React.FC = () => {
               </SheetContent>
             </Sheet>
           ) : (
-            <div className="hidden md:flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Dr. Assistant</span>
+            <div className="hidden md:flex items-center gap-4">
+              {!isLoggedIn ? (
+                !isAuthPage && (
+                  <>
+                    <Link to="/login">
+                      <Button variant="ghost" size="sm" className="text-sm">Login</Button>
+                    </Link>
+                    <Link to="/signup">
+                      <Button size="sm" className="text-sm">Sign Up</Button>
+                    </Link>
+                  </>
+                )
+              ) : (
+                <Button variant="ghost" size="sm" className="text-sm flex items-center gap-1">
+                  <UserRound size={14} />
+                  <span>Dr. Account</span>
+                </Button>
+              )}
             </div>
           )}
         </div>

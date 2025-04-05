@@ -1,15 +1,17 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PatientInfoCard from '@/components/PatientInfoCard';
 import SpeechToTextCard from '@/components/SpeechToTextCard';
 import MedicationCard from '@/components/MedicationCard';
 import { Button } from '@/components/ui/button';
-import { FileText } from 'lucide-react';
+import { FileText, Download, Send } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 const Index = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [patientInfo, setPatientInfo] = useState({
     name: '',
@@ -94,6 +96,39 @@ const Index = () => {
     });
   };
 
+  const viewPrescription = () => {
+    // Validate essential fields before proceeding
+    if (!patientInfo.name || !patientInfo.contactNumber) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide at least the patient's name and contact number.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (medications.length === 0) {
+      toast({
+        title: "No Medications",
+        description: "Please add at least one medication to the prescription.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Navigate to prescription page with the data
+    navigate('/prescription', { 
+      state: { 
+        prescriptionData: {
+          patientInfo,
+          prescriptionText,
+          medications,
+          date: new Date().toLocaleDateString()
+        } 
+      }
+    });
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 w-full max-w-full overflow-x-hidden">
       <Header />
@@ -118,10 +153,19 @@ const Index = () => {
             updateMedication={updateMedication}
           />
           
-          <div className="mt-3 flex justify-center sm:justify-end">
-            <Button onClick={generatePrescription} size="sm" className="w-full sm:w-auto text-sm">
+          <div className="mt-3 flex justify-center sm:justify-end flex-wrap gap-2">
+            <Button onClick={generatePrescription} size="sm" className="text-sm flex-shrink-0">
               <FileText className="mr-1.5 h-3.5 w-3.5" />
-              Generate Prescription
+              Copy to Clipboard
+            </Button>
+            <Button 
+              onClick={viewPrescription} 
+              variant="outline" 
+              size="sm" 
+              className="text-sm flex-shrink-0 bg-medical-600 text-white hover:bg-medical-700"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              View & Download
             </Button>
           </div>
         </div>
