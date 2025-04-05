@@ -99,6 +99,7 @@
     width: 100%;
     box-sizing: border-box;
     -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     overflow-x: hidden;
   }
 
@@ -107,12 +108,30 @@
     text-size-adjust: 100%;
     overflow-x: hidden;
     width: 100%;
+    max-width: 100vw;
   }
 
   #root {
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+  }
+
+  /* Ensure tables look good on mobile */
+  table {
+    min-width: 100%;
+    table-layout: fixed;
+  }
+  
+  @media (max-width: 640px) {
+    table {
+      font-size: 0.75rem;
+    }
+    
+    th, td {
+      padding: 0.5rem 0.25rem;
+      word-break: break-word;
+    }
   }
 }
 

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -19,6 +19,7 @@ interface LoginFormValues {
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginFormValues>({
     defaultValues: {
@@ -28,14 +29,33 @@ const Login = () => {
   });
 
   const onSubmit = (values: LoginFormValues) => {
-    // In a real app, we would validate credentials against a backend
-    console.log('Login details:', values);
-    toast({
-      title: "Login successful",
-      description: "Welcome back to ScriptScribe",
-    });
-    // Navigate to the home page after login
-    navigate('/');
+    setIsLoading(true);
+    
+    // Simulate API request
+    setTimeout(() => {
+      // In a real app, we would validate credentials against a backend
+      console.log('Login details:', values);
+      
+      // Store user info in localStorage for demo purpose
+      // In a real app, this would come from the backend response
+      localStorage.setItem('user', JSON.stringify({
+        name: 'Dr. Sarah Johnson',
+        email: values.email,
+        clinicName: 'City Health Clinic',
+        address: '123 Medical Street',
+        isLoggedIn: true
+      }));
+      
+      toast({
+        title: "Login successful",
+        description: "Welcome back to ScriptScribe",
+      });
+      
+      setIsLoading(false);
+      
+      // Navigate to the home page after login
+      navigate('/');
+    }, 1000);
   };
 
   return (
@@ -90,8 +110,8 @@ const Login = () => {
                   )}
                 />
 
-                <Button type="submit" className="w-full">
-                  Login
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Logging in...' : 'Login'}
                 </Button>
 
                 <div className="text-center text-sm mt-4">
