@@ -27,8 +27,52 @@ export interface Prescription {
   createdAt: string;
 }
 
+// Demo data for when Supabase is not connected
+const DEMO_PRESCRIPTIONS: Prescription[] = [
+  {
+    id: 'demo-prescription-1',
+    doctorId: 'demo-user-id',
+    patientInfo: {
+      name: 'John Demo',
+      age: '42',
+      gender: 'Male',
+      contactNumber: '555-123-4567'
+    },
+    prescriptionText: 'Patient complains of headache and fatigue for the past 3 days. Vital signs normal.',
+    medications: [
+      {
+        id: 'med-1',
+        name: 'Paracetamol',
+        dosage: '500mg',
+        frequency: 'Every 6 hours',
+        duration: '5 days',
+        instructions: 'Take after meals'
+      }
+    ],
+    date: '2025-04-01',
+    createdAt: '2025-04-01T10:30:00Z'
+  }
+];
+
+// Helper to check if we're in demo mode
+const isDemoMode = async (): Promise<boolean> => {
+  try {
+    const { error } = await supabase.from('prescriptions').select('count', { count: 'exact', head: true });
+    return !!error;
+  } catch (error) {
+    return true;
+  }
+}
+
 export async function savePrescription(prescription: Omit<Prescription, 'id' | 'createdAt'>): Promise<string | null> {
   try {
+    // Check if we're in demo mode
+    if (await isDemoMode()) {
+      console.log('Demo mode: Simulating prescription save');
+      const demoId = `demo-${Date.now()}`;
+      return demoId;
+    }
+
     const { data, error } = await supabase
       .from('prescriptions')
       .insert({
@@ -55,6 +99,12 @@ export async function savePrescription(prescription: Omit<Prescription, 'id' | '
 
 export async function getDoctorPrescriptions(doctorId: string): Promise<Prescription[]> {
   try {
+    // Check if we're in demo mode
+    if (await isDemoMode()) {
+      console.log('Demo mode: Returning demo prescriptions');
+      return DEMO_PRESCRIPTIONS;
+    }
+
     const { data, error } = await supabase
       .from('prescriptions')
       .select('*')
@@ -83,6 +133,12 @@ export async function getDoctorPrescriptions(doctorId: string): Promise<Prescrip
 
 export async function getPrescriptionById(id: string): Promise<Prescription | null> {
   try {
+    // Check if we're in demo mode
+    if (await isDemoMode()) {
+      console.log('Demo mode: Returning demo prescription');
+      return DEMO_PRESCRIPTIONS[0];
+    }
+
     const { data, error } = await supabase
       .from('prescriptions')
       .select('*')

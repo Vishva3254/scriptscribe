@@ -1,64 +1,24 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Menu, UserRound, LogOut, Settings } from 'lucide-react';
+import { FileText, Menu, LogOut, Settings, AlertTriangle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-
-interface UserInfo {
-  name: string;
-  email: string;
-  clinicName: string;
-  profilePic?: string | null;
-  isLoggedIn: boolean;
-}
+import { useAuth } from '@/context/AuthContext';
+import { Badge } from '@/components/ui/badge';
 
 const Header: React.FC = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const { user, isDemoMode, signOut } = useAuth();
   
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
   
-  // Check if user is logged in on component mount and when localStorage changes
-  useEffect(() => {
-    const checkUserLogin = () => {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        try {
-          const userData = JSON.parse(userStr);
-          setUser(userData);
-        } catch (e) {
-          console.error('Error parsing user data from localStorage', e);
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-    };
-
-    checkUserLogin();
-    
-    // Listen for storage events (in case user logs in/out in another tab)
-    window.addEventListener('storage', checkUserLogin);
-    return () => window.removeEventListener('storage', checkUserLogin);
-  }, [location.pathname]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out",
-    });
-    navigate('/');
-  };
-
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -81,6 +41,13 @@ const Header: React.FC = () => {
             </div>
           </Link>
           
+          {isDemoMode && (
+            <Badge variant="outline" className="mx-2 bg-yellow-50 text-yellow-800 border-yellow-300 hidden md:flex">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Demo Mode
+            </Badge>
+          )}
+          
           {isMobile ? (
             <Sheet>
               <SheetTrigger asChild>
@@ -97,11 +64,19 @@ const Header: React.FC = () => {
                       <span className="font-medium text-sm">ScriptScribe</span>
                     </div>
                   </div>
+                  
+                  {isDemoMode && (
+                    <div className="px-3 py-2 bg-yellow-50 text-yellow-800 border-b border-yellow-200 text-xs flex items-center">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Demo Mode Active
+                    </div>
+                  )}
+                  
                   <div className="flex-1 overflow-auto py-2">
                     <Link to="/" className="block px-3 py-2.5 hover:bg-gray-100">
                       <span className="text-sm font-medium text-gray-700">Prescriptions</span>
                     </Link>
-                    {!user?.isLoggedIn ? (
+                    {!user ? (
                       !isAuthPage && (
                         <>
                           <Link to="/login" className="block px-3 py-2.5 hover:bg-gray-100">
@@ -117,8 +92,8 @@ const Header: React.FC = () => {
                         <div className="block px-3 py-2.5">
                           <div className="flex items-center space-x-2">
                             <Avatar className="h-6 w-6">
-                              {user.profilePic ? (
-                                <AvatarImage src={user.profilePic} alt={user.name} />
+                              {user.imageUrl ? (
+                                <AvatarImage src={user.imageUrl} alt={user.name} />
                               ) : (
                                 <AvatarFallback className="bg-medical-100 text-medical-800 text-xs">
                                   {getInitials(user.name)}
@@ -134,7 +109,7 @@ const Header: React.FC = () => {
                           <span className="text-sm text-gray-700">My Profile</span>
                         </Link>
                         <button 
-                          onClick={handleLogout}
+                          onClick={signOut}
                           className="flex items-center w-full text-left px-3 py-2.5 hover:bg-gray-100"
                         >
                           <LogOut className="h-3.5 w-3.5 mr-2 text-gray-500" />
@@ -148,7 +123,7 @@ const Header: React.FC = () => {
             </Sheet>
           ) : (
             <div className="hidden md:flex items-center gap-4">
-              {!user?.isLoggedIn ? (
+              {!user ? (
                 !isAuthPage && (
                   <>
                     <Link to="/login">
@@ -167,8 +142,8 @@ const Header: React.FC = () => {
                   </div>
                   <Link to="/profile">
                     <Avatar className="h-8 w-8 cursor-pointer">
-                      {user.profilePic ? (
-                        <AvatarImage src={user.profilePic} alt={user.name} />
+                      {user.imageUrl ? (
+                        <AvatarImage src={user.imageUrl} alt={user.name} />
                       ) : (
                         <AvatarFallback className="bg-medical-100 text-medical-800 text-xs">
                           {getInitials(user.name)}
@@ -180,7 +155,7 @@ const Header: React.FC = () => {
                     variant="ghost" 
                     size="sm" 
                     className="text-sm flex items-center gap-1"
-                    onClick={handleLogout}
+                    onClick={signOut}
                   >
                     <LogOut size={14} />
                     <span>Logout</span>
