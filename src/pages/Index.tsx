@@ -7,17 +7,13 @@ import PatientInfoCard from '@/components/PatientInfoCard';
 import SpeechToTextCard from '@/components/SpeechToTextCard';
 import MedicationCard from '@/components/MedicationCard';
 import { Button } from '@/components/ui/button';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, Send } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import { savePrescription, Medication, PatientInfo } from '@/services/prescriptionService';
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
-  
-  const [patientInfo, setPatientInfo] = useState<PatientInfo>({
+  const [patientInfo, setPatientInfo] = useState({
     name: '',
     age: '',
     gender: '',
@@ -26,9 +22,14 @@ const Index = () => {
 
   const [prescriptionText, setPrescriptionText] = useState('');
   
-  const [medications, setMedications] = useState<Medication[]>([]);
-
-  const [saving, setSaving] = useState(false);
+  const [medications, setMedications] = useState<Array<{
+    id: string;
+    name: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    instructions: string;
+  }>>([]);
 
   const updatePatientInfo = (field: string, value: string) => {
     setPatientInfo(prev => ({
@@ -95,7 +96,7 @@ const Index = () => {
     });
   };
 
-  const viewPrescription = async () => {
+  const viewPrescription = () => {
     // Validate essential fields before proceeding
     if (!patientInfo.name || !patientInfo.contactNumber) {
       toast({
@@ -115,54 +116,17 @@ const Index = () => {
       return;
     }
     
-    // Save prescription if user is logged in
-    if (user) {
-      setSaving(true);
-      
-      try {
-        const prescriptionId = await savePrescription({
-          doctorId: user.id,
+    // Navigate to prescription page with the data
+    navigate('/prescription', { 
+      state: { 
+        prescriptionData: {
           patientInfo,
           prescriptionText,
           medications,
-          date: new Date().toLocaleDateString(),
-        });
-        
-        // Navigate to prescription page with the data
-        navigate('/prescription', { 
-          state: { 
-            prescriptionData: {
-              id: prescriptionId,
-              patientInfo,
-              prescriptionText,
-              medications,
-              date: new Date().toLocaleDateString()
-            } 
-          }
-        });
-      } catch (error) {
-        console.error('Error saving prescription:', error);
-        toast({
-          title: "Error",
-          description: "Failed to save prescription. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setSaving(false);
+          date: new Date().toLocaleDateString()
+        } 
       }
-    } else {
-      // Navigate to prescription page with the data
-      navigate('/prescription', { 
-        state: { 
-          prescriptionData: {
-            patientInfo,
-            prescriptionText,
-            medications,
-            date: new Date().toLocaleDateString()
-          } 
-        }
-      });
-    }
+    });
   };
 
   return (
@@ -196,13 +160,12 @@ const Index = () => {
             </Button>
             <Button 
               onClick={viewPrescription} 
-              disabled={saving}
               variant="outline" 
               size="sm" 
               className="text-sm flex-shrink-0 bg-medical-600 text-white hover:bg-medical-700"
             >
               <Download className="mr-1.5 h-3.5 w-3.5" />
-              {saving ? 'Saving...' : 'View & Download'}
+              View & Download
             </Button>
           </div>
         </div>

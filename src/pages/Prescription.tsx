@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -9,28 +9,44 @@ import { useToast } from '@/hooks/use-toast';
 import { Download, FileText, Send } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { useAuth } from '@/context/AuthContext';
-import { getPrescriptionById, Prescription as PrescriptionType } from '@/services/prescriptionService';
-import { useQuery } from '@tanstack/react-query';
 
 const Prescription = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const prescriptionId = searchParams.get('id');
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
+  const [user, setUser] = useState<any>(null);
 
-  // Fetch prescription by ID if available
-  const { data: fetchedPrescription, isLoading } = useQuery({
-    queryKey: ['prescription', prescriptionId],
-    queryFn: () => prescriptionId ? getPrescriptionById(prescriptionId) : Promise.resolve(null),
-    enabled: !!prescriptionId,
-  });
+  // Load doctor info from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        setUser(userData);
+      } catch (e) {
+        console.error('Error parsing user data', e);
+      }
+    }
+  }, []);
 
-  // Get prescription data from location state or from query result
-  const prescriptionData = fetchedPrescription || location.state?.prescriptionData || {
+  // Use doctor info from localStorage or fallback
+  const doctorInfo = user ? {
+    name: user.name || "Dr. Sarah Johnson",
+    clinicName: user.clinicName || "City Health Clinic",
+    address: user.address || "123 Medical Street, Healthcare City, HC 12345",
+    phone: user.phone || "+1 (555) 123-4567",
+    email: user.email || "dr.johnson@cityhealthclinic.com",
+  } : {
+    name: "Dr. Sarah Johnson",
+    clinicName: "City Health Clinic",
+    address: "123 Medical Street, Healthcare City, HC 12345",
+    phone: "+1 (555) 123-4567",
+    email: "dr.johnson@cityhealthclinic.com",
+  };
+
+  // Get prescription data from location state or use default values
+  const prescriptionData = location.state?.prescriptionData || {
     patientInfo: {
       name: "John Doe",
       age: "45",
@@ -57,27 +73,6 @@ const Prescription = () => {
       }
     ],
     date: new Date().toLocaleDateString()
-  };
-
-  // Doctor info from context or fallback
-  const doctorInfo = user ? {
-    name: user.name,
-    clinicName: user.clinicName,
-    address: user.address,
-    phone: "+1 (555) 123-4567", // Placeholder, could be added to profile
-    email: user.email,
-    headerColor: user.prescriptionSettings?.headerColor || '#4F46E5',
-    footerText: user.prescriptionSettings?.footerText || `© ${new Date().getFullYear()} ${user.clinicName}`,
-    logo: user.imageUrl
-  } : {
-    name: "Dr. Sarah Johnson",
-    clinicName: "City Health Clinic",
-    address: "123 Medical Street, Healthcare City, HC 12345",
-    phone: "+1 (555) 123-4567",
-    email: "dr.johnson@cityhealthclinic.com",
-    headerColor: '#4F46E5',
-    footerText: "© 2025 City Health Clinic",
-    logo: null
   };
 
   const downloadPrescription = async () => {
@@ -127,7 +122,7 @@ const Prescription = () => {
     message += `*Age/Gender:* ${patientInfo.age}/${patientInfo.gender}\n\n`;
     
     message += `*MEDICATIONS:*\n`;
-    medications.forEach((med: any, idx: number) => {
+    medications.forEach((med, idx) => {
       message += `${idx + 1}. ${med.name} - ${med.dosage}\n`;
       message += `   Frequency: ${med.frequency}\n`;
       message += `   Duration: ${med.duration}\n`;
@@ -151,18 +146,6 @@ const Prescription = () => {
       description: "Opening WhatsApp to share the prescription.",
     });
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Header />
-        <main className="flex-grow flex items-center justify-center p-4">
-          <p>Loading prescription...</p>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -196,27 +179,9 @@ const Prescription = () => {
           <Card className="border shadow-sm">
             <CardContent className="p-0">
               <div id="prescription-to-print" className="p-4 sm:p-6 bg-white">
-                {/* Clinic Header with custom styling */}
-                <div 
-                  className="text-center pb-4 mb-4 flex flex-col items-center"
-                  style={{ 
-                    borderBottom: `2px solid ${doctorInfo.headerColor || '#4F46E5'}`
-                  }}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    {doctorInfo.logo && (
-                      <img 
-                        src={doctorInfo.logo} 
-                        alt="Clinic Logo" 
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
-                    )}
-                    <div>
-                      <h1 className="text-xl font-bold" style={{ color: doctorInfo.headerColor || '#4F46E5' }}>
-                        {doctorInfo.clinicName}
-                      </h1>
-                    </div>
-                  </div>
+                {/* Clinic Header */}
+                <div className="text-center border-b pb-4 mb-4">
+                  <h1 className="text-xl font-bold text-medical-700">{doctorInfo.clinicName}</h1>
                   <p className="text-sm text-gray-600">{doctorInfo.name}</p>
                   <p className="text-xs text-gray-500">{doctorInfo.address}</p>
                   <p className="text-xs text-gray-500">Phone: {doctorInfo.phone} | Email: {doctorInfo.email}</p>
@@ -225,7 +190,7 @@ const Prescription = () => {
                 {/* Prescription Title & Date */}
                 <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
                   <div className="flex items-center">
-                    <FileText className="h-4 w-4 mr-1.5" style={{ color: doctorInfo.headerColor || '#4F46E5' }} />
+                    <FileText className="h-4 w-4 mr-1.5 text-medical-600" />
                     <span className="font-medium">Prescription</span>
                   </div>
                   <div className="text-sm">
@@ -252,7 +217,7 @@ const Prescription = () => {
                 )}
                 
                 {/* Medications */}
-                {prescriptionData.medications && prescriptionData.medications.length > 0 && (
+                {prescriptionData.medications.length > 0 && (
                   <div className="mb-4">
                     <h3 className="text-sm font-medium mb-2">Medications</h3>
                     <div className="border rounded-md overflow-x-auto">
@@ -266,7 +231,7 @@ const Prescription = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {prescriptionData.medications.map((med: any) => (
+                          {prescriptionData.medications.map((med) => (
                             <tr key={med.id}>
                               <td className="px-2 sm:px-3 py-2">{med.name}</td>
                               <td className="px-2 sm:px-3 py-2">{med.dosage}</td>
@@ -279,7 +244,7 @@ const Prescription = () => {
                     </div>
                     {/* Instructions */}
                     <div className="mt-3">
-                      {prescriptionData.medications.map((med: any) => (
+                      {prescriptionData.medications.map((med) => (
                         med.instructions && (
                           <div key={`inst-${med.id}`} className="text-sm mb-1">
                             <span className="font-medium">{med.name}</span>: {med.instructions}
@@ -298,14 +263,6 @@ const Prescription = () => {
                     <p className="text-xs text-gray-500">Signature</p>
                   </div>
                 </div>
-                
-                {/* Custom footer */}
-                {doctorInfo.footerText && (
-                  <div className="mt-8 pt-4 text-center text-xs text-gray-500" 
-                    style={{ borderTop: '1px solid #eee' }}>
-                    {doctorInfo.footerText}
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>

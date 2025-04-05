@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { FileText } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 
 interface LoginFormValues {
   email: string;
@@ -18,7 +17,7 @@ interface LoginFormValues {
 }
 
 const Login = () => {
-  const { signIn } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,15 +28,34 @@ const Login = () => {
     },
   });
 
-  const onSubmit = async (values: LoginFormValues) => {
+  const onSubmit = (values: LoginFormValues) => {
     setIsLoading(true);
-    try {
-      await signIn(values.email, values.password);
-    } catch (error) {
-      console.error('Login error:', error);
-    } finally {
+    
+    // Simulate API request
+    setTimeout(() => {
+      // In a real app, we would validate credentials against a backend
+      console.log('Login details:', values);
+      
+      // Store user info in localStorage for demo purpose
+      // In a real app, this would come from the backend response
+      localStorage.setItem('user', JSON.stringify({
+        name: 'Dr. Sarah Johnson',
+        email: values.email,
+        clinicName: 'City Health Clinic',
+        address: '123 Medical Street',
+        isLoggedIn: true
+      }));
+      
+      toast({
+        title: "Login successful",
+        description: "Welcome back to ScriptScribe",
+      });
+      
       setIsLoading(false);
-    }
+      
+      // Navigate to the home page after login
+      navigate('/');
+    }, 1000);
   };
 
   return (
