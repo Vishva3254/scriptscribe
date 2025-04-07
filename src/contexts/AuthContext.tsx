@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,14 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         console.log('Auth event:', event);
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
-        // Defer profile fetching to avoid Supabase deadlock
         if (newSession?.user) {
           setTimeout(() => {
             fetchProfile(newSession.user.id);
@@ -65,7 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
@@ -136,7 +132,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
-        // Insert the user profile data
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -148,9 +143,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phone: userData.phone || null,
             qualification: userData.qualification || null,
             registrationnumber: userData.registrationNumber || null,
+            prescriptionstyle: {
+              headerColor: "#1E88E5",
+              fontFamily: "Inter",
+              showLogo: true
+            }
           });
 
         if (profileError) {
+          console.error('Profile creation failed:', profileError);
           toast({
             title: 'Profile creation failed',
             description: profileError.message,
@@ -167,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         navigate('/');
       }
     } catch (error: any) {
+      console.error('Signup error:', error);
       toast({
         title: 'Unexpected error',
         description: error.message,
@@ -240,7 +242,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       
-      // Convert the UserProfile updates to match the database column names
       const dbUpdates: Partial<ProfileRow> = {};
       
       if (updates.name) dbUpdates.name = updates.name;
@@ -266,7 +267,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Refresh the profile data
       fetchProfile(user.id);
       
       toast({
