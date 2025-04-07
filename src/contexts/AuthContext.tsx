@@ -128,10 +128,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           description: error.message,
           variant: 'destructive',
         });
-        return;
+        throw error;
       }
 
       if (data.user) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -157,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             description: profileError.message,
             variant: 'destructive',
           });
-          return;
+          throw profileError;
         }
 
         toast({
@@ -169,11 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       console.error('Signup error:', error);
-      toast({
-        title: 'Unexpected error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      throw error;
     } finally {
       setIsLoading(false);
     }

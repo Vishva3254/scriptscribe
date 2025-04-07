@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { FileText } from 'lucide-react';
+import { FileText, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface SignupFormValues {
   doctorName: string;
@@ -22,6 +23,7 @@ interface SignupFormValues {
 
 const Signup = () => {
   const { signUp, isLoading } = useAuth();
+  const [signupError, setSignupError] = React.useState<string | null>(null);
 
   const form = useForm<SignupFormValues>({
     defaultValues: {
@@ -35,6 +37,8 @@ const Signup = () => {
   });
 
   const onSubmit = async (values: SignupFormValues) => {
+    setSignupError(null);
+    
     if (values.password !== values.confirmPassword) {
       form.setError('confirmPassword', { 
         type: 'manual', 
@@ -43,11 +47,15 @@ const Signup = () => {
       return;
     }
 
-    await signUp(values.email, values.password, {
-      name: values.doctorName,
-      clinicName: values.clinicName,
-      address: values.address
-    });
+    try {
+      await signUp(values.email, values.password, {
+        name: values.doctorName,
+        clinicName: values.clinicName,
+        address: values.address
+      });
+    } catch (error: any) {
+      setSignupError(error.message || 'Failed to create account. Please try again.');
+    }
   };
 
   return (
@@ -62,6 +70,13 @@ const Signup = () => {
             <CardTitle className="text-xl font-semibold text-center">Create your ScriptScribe Account</CardTitle>
           </CardHeader>
           <CardContent>
+            {signupError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{signupError}</AlertDescription>
+              </Alert>
+            )}
+            
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -79,6 +94,7 @@ const Signup = () => {
                             {...field}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -97,6 +113,7 @@ const Signup = () => {
                             {...field}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -116,6 +133,7 @@ const Signup = () => {
                           {...field}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -135,6 +153,7 @@ const Signup = () => {
                           {...field}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -155,6 +174,7 @@ const Signup = () => {
                             {...field}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
