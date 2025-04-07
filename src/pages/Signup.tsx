@@ -11,6 +11,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { FileText, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 interface SignupFormValues {
   doctorName: string;
@@ -24,6 +25,7 @@ interface SignupFormValues {
 const Signup = () => {
   const { signUp, isLoading } = useAuth();
   const [signupError, setSignupError] = React.useState<string | null>(null);
+  const { toast } = useToast();
 
   const form = useForm<SignupFormValues>({
     defaultValues: {
@@ -53,7 +55,14 @@ const Signup = () => {
         clinicName: values.clinicName,
         address: values.address
       });
+      
+      toast({
+        title: 'Account created',
+        description: 'Your account has been created successfully!',
+      });
+      
     } catch (error: any) {
+      console.error('Signup error:', error);
       setSignupError(error.message || 'Failed to create account. Please try again.');
     }
   };
