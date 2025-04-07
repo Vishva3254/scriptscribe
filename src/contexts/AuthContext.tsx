@@ -4,6 +4,10 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
+
+// Define types for our user profile based on the Database types
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 interface UserProfile {
   name: string;
@@ -91,7 +95,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data) {
-        setProfile(data as UserProfile);
+        const userProfile: UserProfile = {
+          name: data.name,
+          email: data.email,
+          clinicName: data.clinicname,
+          address: data.address,
+          phone: data.phone || undefined,
+          qualification: data.qualification || undefined,
+          registrationNumber: data.registrationnumber || undefined,
+          profilePic: data.profilepic || undefined,
+          prescriptionStyle: data.prescriptionstyle as UserProfile['prescriptionStyle'] || undefined
+        };
+        setProfile(userProfile);
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
@@ -128,11 +143,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: data.user.id,
             email,
             name: userData.name,
-            clinicName: userData.clinicName,
+            clinicname: userData.clinicName,
             address: userData.address,
             phone: userData.phone || null,
             qualification: userData.qualification || null,
-            registrationNumber: userData.registrationNumber || null,
+            registrationnumber: userData.registrationNumber || null,
           });
 
         if (profileError) {
@@ -225,9 +240,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       
+      // Convert the UserProfile updates to match the database column names
+      const dbUpdates: Partial<ProfileRow> = {};
+      
+      if (updates.name) dbUpdates.name = updates.name;
+      if (updates.clinicName) dbUpdates.clinicname = updates.clinicName;
+      if (updates.address) dbUpdates.address = updates.address;
+      if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+      if (updates.qualification !== undefined) dbUpdates.qualification = updates.qualification;
+      if (updates.registrationNumber !== undefined) dbUpdates.registrationnumber = updates.registrationNumber;
+      if (updates.profilePic !== undefined) dbUpdates.profilepic = updates.profilePic;
+      if (updates.prescriptionStyle !== undefined) dbUpdates.prescriptionstyle = updates.prescriptionStyle;
+      
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', user.id);
 
       if (error) {
