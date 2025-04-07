@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
 import { FileText } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SignupFormValues {
   doctorName: string;
@@ -21,9 +21,7 @@ interface SignupFormValues {
 }
 
 const Signup = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const { signUp, isLoading } = useAuth();
 
   const form = useForm<SignupFormValues>({
     defaultValues: {
@@ -36,38 +34,20 @@ const Signup = () => {
     },
   });
 
-  const onSubmit = (values: SignupFormValues) => {
+  const onSubmit = async (values: SignupFormValues) => {
     if (values.password !== values.confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please ensure your passwords match",
-        variant: "destructive",
+      form.setError('confirmPassword', { 
+        type: 'manual', 
+        message: "Passwords don't match" 
       });
       return;
     }
 
-    setIsLoading(true);
-    
-    // In a real app, you would send this to your backend
-    console.log('Signup details:', values);
-    
-    // Demo: Store in localStorage
-    localStorage.setItem('user', JSON.stringify({
+    await signUp(values.email, values.password, {
       name: values.doctorName,
-      email: values.email,
       clinicName: values.clinicName,
-      address: values.address,
-      isLoggedIn: true
-    }));
-    
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Account created",
-        description: "Welcome to ScriptScribe",
-      });
-      navigate('/');
-    }, 1000);
+      address: values.address
+    });
   };
 
   return (

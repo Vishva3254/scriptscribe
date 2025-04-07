@@ -1,15 +1,15 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { FileText } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LoginFormValues {
   email: string;
@@ -17,9 +17,7 @@ interface LoginFormValues {
 }
 
 const Login = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const { signIn, isLoading } = useAuth();
 
   const form = useForm<LoginFormValues>({
     defaultValues: {
@@ -28,34 +26,8 @@ const Login = () => {
     },
   });
 
-  const onSubmit = (values: LoginFormValues) => {
-    setIsLoading(true);
-    
-    // Simulate API request
-    setTimeout(() => {
-      // In a real app, we would validate credentials against a backend
-      console.log('Login details:', values);
-      
-      // Store user info in localStorage for demo purpose
-      // In a real app, this would come from the backend response
-      localStorage.setItem('user', JSON.stringify({
-        name: 'Dr. Sarah Johnson',
-        email: values.email,
-        clinicName: 'City Health Clinic',
-        address: '123 Medical Street',
-        isLoggedIn: true
-      }));
-      
-      toast({
-        title: "Login successful",
-        description: "Welcome back to ScriptScribe",
-      });
-      
-      setIsLoading(false);
-      
-      // Navigate to the home page after login
-      navigate('/');
-    }, 1000);
+  const onSubmit = async (values: LoginFormValues) => {
+    await signIn(values.email, values.password);
   };
 
   return (
