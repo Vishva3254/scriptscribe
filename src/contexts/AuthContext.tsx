@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,15 +48,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up the auth state listener first
+    // Set up the auth state listener first to avoid missing auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         console.log('Auth event:', event);
+        
+        // Only update state synchronously in the callback
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
+        // If we have a user, fetch their profile using setTimeout to avoid deadlocks
         if (newSession?.user) {
-          // Use setTimeout to ensure this runs after auth state has fully updated
           setTimeout(() => {
             fetchProfile(newSession.user.id);
           }, 0);
@@ -74,8 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (currentSession?.user) {
         fetchProfile(currentSession.user.id);
+      } else {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     return () => {
@@ -93,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching profile:', error);
+        setIsLoading(false);
         return;
       }
 
@@ -112,8 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         setProfile(userProfile);
       }
+      setIsLoading(false);
     } catch (error) {
       console.error('Error in fetchProfile:', error);
+      setIsLoading(false);
     }
   };
 
@@ -154,10 +159,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             clinicname: userData.clinicName,
             address: userData.address,
             phone: userData.phone || null,
-            clinicwhatsapp: userData.clinicWhatsApp || null, // Added field
+            clinicwhatsapp: userData.clinicWhatsApp || null,
             qualification: userData.qualification || null,
             registrationnumber: userData.registrationNumber || null,
-            cliniclogo: userData.clinicLogo || null, // Added field
+            cliniclogo: userData.clinicLogo || null,
             prescriptionstyle: {
               headerColor: "#1E88E5",
               fontFamily: "Inter",
@@ -280,6 +285,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Refresh profile data after updating
       fetchProfile(user.id);
       
       toast({
