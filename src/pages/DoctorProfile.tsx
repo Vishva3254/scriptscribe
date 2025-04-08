@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Camera, User, FileEdit, Save, Check, X } from 'lucide-react';
+import { Camera, User, FileEdit, Save, Check, X, Image } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -27,38 +27,27 @@ import {
 } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 
-interface DoctorInfo {
-  name: string;
-  email: string;
-  clinicName: string;
-  address: string;
-  phone: string;
-  qualification: string;
-  registrationNumber: string;
-  profilePic: string | null;
-  prescriptionStyle: {
-    headerColor: string;
-    fontFamily: string;
-    showLogo: boolean;
-  }
-}
-
 const DoctorProfile: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
+  const [clinicLogoPreview, setClinicLogoPreview] = useState<string | null>(null);
+  const { profile, updateProfile } = useAuth();
   
-  const [doctorInfo, setDoctorInfo] = useState<DoctorInfo>({
+  const [doctorInfo, setDoctorInfo] = useState({
     name: '',
     email: '',
     clinicName: '',
     address: '',
     phone: '',
+    clinicWhatsApp: '', // Added field
     qualification: '',
     registrationNumber: '',
-    profilePic: null,
+    profilePic: null as string | null,
+    clinicLogo: null as string | null, // Added field
     prescriptionStyle: {
       headerColor: '#1E88E5',
       fontFamily: 'Inter',
@@ -67,33 +56,30 @@ const DoctorProfile: React.FC = () => {
   });
 
   useEffect(() => {
-    // Check if user is logged in
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
-      navigate('/login');
-      return;
-    }
-
-    // Load doctor data
-    try {
-      const userData = JSON.parse(userStr);
+    if (profile) {
       setDoctorInfo({
-        ...doctorInfo,
-        ...userData,
-        prescriptionStyle: userData.prescriptionStyle || doctorInfo.prescriptionStyle
+        name: profile.name || '',
+        email: profile.email || '',
+        clinicName: profile.clinicName || '',
+        address: profile.address || '',
+        phone: profile.phone || '',
+        clinicWhatsApp: profile.clinicWhatsApp || '', // Added field
+        qualification: profile.qualification || '',
+        registrationNumber: profile.registrationNumber || '',
+        profilePic: profile.profilePic || null,
+        clinicLogo: profile.clinicLogo || null, // Added field
+        prescriptionStyle: profile.prescriptionStyle || doctorInfo.prescriptionStyle
       });
-      if (userData.profilePic) {
-        setProfilePicPreview(userData.profilePic);
+      
+      if (profile.profilePic) {
+        setProfilePicPreview(profile.profilePic);
       }
-    } catch (e) {
-      console.error('Error parsing user data', e);
-      toast({
-        title: "Error loading profile",
-        description: "Could not load your profile information",
-        variant: "destructive"
-      });
+      
+      if (profile.clinicLogo) {
+        setClinicLogoPreview(profile.clinicLogo);
+      }
     }
-  }, []);
+  }, [profile]);
 
   const handleProfilePicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -115,6 +101,31 @@ const DoctorProfile: React.FC = () => {
       setDoctorInfo(prev => ({
         ...prev,
         profilePic: result
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClinicLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5000000) { // 5MB limit
+      toast({
+        title: "File too large",
+        description: "Please select an image less than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setClinicLogoPreview(result);
+      setDoctorInfo(prev => ({
+        ...prev,
+        clinicLogo: result
       }));
     };
     reader.readAsDataURL(file);
@@ -149,37 +160,51 @@ const DoctorProfile: React.FC = () => {
       return;
     }
 
-    // Save to localStorage
-    localStorage.setItem('user', JSON.stringify({
-      ...doctorInfo,
-      isLoggedIn: true
-    }));
-
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been successfully updated"
+    updateProfile({
+      name: doctorInfo.name,
+      clinicName: doctorInfo.clinicName,
+      address: doctorInfo.address,
+      phone: doctorInfo.phone,
+      clinicWhatsApp: doctorInfo.clinicWhatsApp, // Added field
+      qualification: doctorInfo.qualification,
+      registrationNumber: doctorInfo.registrationNumber,
+      profilePic: doctorInfo.profilePic,
+      clinicLogo: doctorInfo.clinicLogo, // Added field
+      prescriptionStyle: doctorInfo.prescriptionStyle
     });
 
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    // Reload from localStorage to discard changes
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const userData = JSON.parse(userStr);
+    if (profile) {
       setDoctorInfo({
-        ...doctorInfo,
-        ...userData,
-        prescriptionStyle: userData.prescriptionStyle || doctorInfo.prescriptionStyle
+        name: profile.name || '',
+        email: profile.email || '',
+        clinicName: profile.clinicName || '',
+        address: profile.address || '',
+        phone: profile.phone || '',
+        clinicWhatsApp: profile.clinicWhatsApp || '', // Added field
+        qualification: profile.qualification || '',
+        registrationNumber: profile.registrationNumber || '',
+        profilePic: profile.profilePic || null,
+        clinicLogo: profile.clinicLogo || null, // Added field
+        prescriptionStyle: profile.prescriptionStyle || doctorInfo.prescriptionStyle
       });
-      setProfilePicPreview(userData.profilePic);
+      
+      setProfilePicPreview(profile.profilePic);
+      setClinicLogoPreview(profile.clinicLogo);
     }
+    
     setIsEditing(false);
   };
 
   const triggerFileUpload = () => {
     fileInputRef.current?.click();
+  };
+
+  const triggerLogoUpload = () => {
+    logoInputRef.current?.click();
   };
 
   const getInitials = (name: string) => {
@@ -305,6 +330,18 @@ const DoctorProfile: React.FC = () => {
                         value={doctorInfo.phone}
                         onChange={handleChange}
                         disabled={!isEditing}
+                        placeholder="Personal contact number"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="clinicWhatsApp" className="text-sm font-medium text-gray-700 mb-1">Medical Shop WhatsApp</Label>
+                      <Input
+                        id="clinicWhatsApp"
+                        name="clinicWhatsApp"
+                        value={doctorInfo.clinicWhatsApp}
+                        onChange={handleChange}
+                        disabled={!isEditing}
+                        placeholder="Include country code (e.g. +91xxxxxxxxxx)"
                       />
                     </div>
                     <div>
@@ -337,6 +374,38 @@ const DoctorProfile: React.FC = () => {
                         disabled={!isEditing}
                         required
                       />
+                    </div>
+                    <div>
+                      <Label htmlFor="clinicLogo" className="text-sm font-medium text-gray-700 mb-1">Clinic Logo</Label>
+                      <div className="flex items-center space-x-2">
+                        {clinicLogoPreview && (
+                          <div className="w-10 h-10 rounded-md overflow-hidden">
+                            <img 
+                              src={clinicLogoPreview} 
+                              alt="Clinic Logo" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <input 
+                          type="file" 
+                          ref={logoInputRef} 
+                          className="hidden" 
+                          accept="image/*" 
+                          onChange={handleClinicLogoUpload}
+                        />
+                        {isEditing && (
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={triggerLogoUpload}
+                          >
+                            <Image className="h-4 w-4 mr-1" />
+                            {clinicLogoPreview ? "Change Logo" : "Upload Logo"}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <div className="md:col-span-2">
                       <Label htmlFor="address" className="text-sm font-medium text-gray-700 mb-1">Clinic Address</Label>
@@ -438,10 +507,10 @@ const DoctorProfile: React.FC = () => {
                       className="p-3 text-white"
                     >
                       <div className="flex items-center justify-between">
-                        {doctorInfo.prescriptionStyle.showLogo && profilePicPreview && (
+                        {doctorInfo.prescriptionStyle.showLogo && (clinicLogoPreview || profilePicPreview) && (
                           <div className="w-12 h-12 rounded-full overflow-hidden bg-white">
                             <img 
-                              src={profilePicPreview} 
+                              src={clinicLogoPreview || profilePicPreview} 
                               alt="Logo" 
                               className="w-full h-full object-cover"
                             />
@@ -506,10 +575,10 @@ const DoctorProfile: React.FC = () => {
                         className="p-4 text-white"
                       >
                         <div className="flex items-center justify-between">
-                          {doctorInfo.prescriptionStyle.showLogo && profilePicPreview && (
+                          {doctorInfo.prescriptionStyle.showLogo && (clinicLogoPreview || profilePicPreview) && (
                             <div className="w-16 h-16 rounded-full overflow-hidden bg-white">
                               <img 
-                                src={profilePicPreview} 
+                                src={clinicLogoPreview || profilePicPreview} 
                                 alt="Logo" 
                                 className="w-full h-full object-cover"
                               />

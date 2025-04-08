@@ -6,44 +6,17 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Download, FileText, Send } from 'lucide-react';
+import { Download, FileText, Send, ShoppingCart, User } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Prescription = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
-
-  // Load doctor info from localStorage
-  useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      try {
-        const userData = JSON.parse(userStr);
-        setUser(userData);
-      } catch (e) {
-        console.error('Error parsing user data', e);
-      }
-    }
-  }, []);
-
-  // Use doctor info from localStorage or fallback
-  const doctorInfo = user ? {
-    name: user.name || "Dr. Sarah Johnson",
-    clinicName: user.clinicName || "City Health Clinic",
-    address: user.address || "123 Medical Street, Healthcare City, HC 12345",
-    phone: user.phone || "+1 (555) 123-4567",
-    email: user.email || "dr.johnson@cityhealthclinic.com",
-  } : {
-    name: "Dr. Sarah Johnson",
-    clinicName: "City Health Clinic",
-    address: "123 Medical Street, Healthcare City, HC 12345",
-    phone: "+1 (555) 123-4567",
-    email: "dr.johnson@cityhealthclinic.com",
-  };
+  const { profile } = useAuth();
 
   // Get prescription data from location state or use default values
   const prescriptionData = location.state?.prescriptionData || {
@@ -112,38 +85,65 @@ const Prescription = () => {
     }
   };
 
-  const shareViaWhatsApp = () => {
+  const shareViaWhatsApp = (recipient: 'patient' | 'medicalShop') => {
     const { patientInfo, medications } = prescriptionData;
     
-    let message = `*Prescription from ${doctorInfo.clinicName}*\n\n`;
-    message += `*Dr:* ${doctorInfo.name}\n`;
+    let message = `*Prescription from ${profile?.clinicName || 'Doctor'}*\n\n`;
+    message += `*Dr:* ${profile?.name || 'Doctor'}\n`;
     message += `*Date:* ${prescriptionData.date}\n\n`;
     message += `*Patient:* ${patientInfo.name}\n`;
     message += `*Age/Gender:* ${patientInfo.age}/${patientInfo.gender}\n\n`;
     
-    message += `*MEDICATIONS:*\n`;
-    medications.forEach((med, idx) => {
-      message += `${idx + 1}. ${med.name} - ${med.dosage}\n`;
-      message += `   Frequency: ${med.frequency}\n`;
-      message += `   Duration: ${med.duration}\n`;
-      if (med.instructions) {
-        message += `   Instructions: ${med.instructions}\n`;
-      }
-      message += `\n`;
-    });
+    if (prescriptionData.prescriptionText) {
+      message += `*Doctor's Notes:*\n${prescriptionData.prescriptionText}\n\n`;
+    }
     
-    message += `\n*Doctor's Notes:*\n${prescriptionData.prescriptionText}\n\n`;
-    message += `For any queries, please contact: ${doctorInfo.phone}`;
+    if (medications && medications.length > 0) {
+      message += `*MEDICATIONS:*\n`;
+      medications.forEach((med, idx) => {
+        message += `${idx + 1}. ${med.name} - ${med.dosage}\n`;
+        message += `   Frequency: ${med.frequency}\n`;
+        message += `   Duration: ${med.duration}\n`;
+        if (med.instructions) {
+          message += `   Instructions: ${med.instructions}\n`;
+        }
+        message += `\n`;
+      });
+    }
+    
+    message += `For any queries, please contact: ${profile?.phone || 'the doctor'}`;
     
     // Encode the message for the URL
     const encodedMessage = encodeURIComponent(message);
-    const whatsappURL = `https://wa.me/${patientInfo.contactNumber.replace(/\D+/g, '')}?text=${encodedMessage}`;
     
+    // Get the appropriate number based on recipient type
+    let phoneNumber = '';
+    if (recipient === 'patient') {
+      phoneNumber = patientInfo.contactNumber;
+    } else if (recipient === 'medicalShop') {
+      phoneNumber = profile?.clinicWhatsApp || '';
+    }
+    
+    // Remove non-digit characters from the phone number
+    const cleanPhone = phoneNumber.replace(/\D+/g, '');
+    
+    if (!cleanPhone) {
+      toast({
+        title: recipient === 'medicalShop' ? "Medical Shop WhatsApp Not Set" : "Patient Phone Missing",
+        description: recipient === 'medicalShop' 
+          ? "Please add a medical shop WhatsApp number in your profile settings."
+          : "Patient's contact number is missing.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const whatsappURL = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
     window.open(whatsappURL, '_blank');
     
     toast({
       title: "WhatsApp Sharing",
-      description: "Opening WhatsApp to share the prescription.",
+      description: `Opening WhatsApp to share with ${recipient === 'medicalShop' ? 'medical shop' : 'patient'}.`,
     });
   };
 
@@ -165,13 +165,22 @@ const Prescription = () => {
                 {loading ? 'Downloading...' : 'Download PDF'}
               </Button>
               <Button 
-                onClick={shareViaWhatsApp} 
+                onClick={() => shareViaWhatsApp('patient')} 
                 variant="outline" 
                 size="sm" 
                 className="flex-1 sm:flex-initial"
               >
-                <Send className="mr-1.5 h-3.5 w-3.5" />
-                Share via WhatsApp
+                <User className="mr-1.5 h-3.5 w-3.5" />
+                Share with Patient
+              </Button>
+              <Button 
+                onClick={() => shareViaWhatsApp('medicalShop')} 
+                variant="outline" 
+                size="sm" 
+                className="flex-1 sm:flex-initial"
+              >
+                <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+                Share with Medical Shop
               </Button>
             </div>
           </div>
@@ -181,10 +190,23 @@ const Prescription = () => {
               <div id="prescription-to-print" className="p-4 sm:p-6 bg-white">
                 {/* Clinic Header */}
                 <div className="text-center border-b pb-4 mb-4">
-                  <h1 className="text-xl font-bold text-medical-700">{doctorInfo.clinicName}</h1>
-                  <p className="text-sm text-gray-600">{doctorInfo.name}</p>
-                  <p className="text-xs text-gray-500">{doctorInfo.address}</p>
-                  <p className="text-xs text-gray-500">Phone: {doctorInfo.phone} | Email: {doctorInfo.email}</p>
+                  <div className="flex items-center justify-center mb-2">
+                    {profile?.prescriptionStyle?.showLogo && profile?.clinicLogo && (
+                      <div className="w-16 h-16 mr-3 overflow-hidden">
+                        <img 
+                          src={profile.clinicLogo} 
+                          alt="Clinic Logo" 
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <h1 className="text-xl font-bold text-medical-700">{profile?.clinicName || "City Health Clinic"}</h1>
+                      <p className="text-sm text-gray-600">{profile?.name || "Dr. Sarah Johnson"}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">{profile?.address || "123 Medical Street, Healthcare City, HC 12345"}</p>
+                  <p className="text-xs text-gray-500">Phone: {profile?.phone || "+1 (555) 123-4567"} | Email: {profile?.email || "dr.johnson@cityhealthclinic.com"}</p>
                 </div>
                 
                 {/* Prescription Title & Date */}
@@ -216,8 +238,8 @@ const Prescription = () => {
                   </div>
                 )}
                 
-                {/* Medications */}
-                {prescriptionData.medications.length > 0 && (
+                {/* Medications - Only render if there are medications */}
+                {prescriptionData.medications && prescriptionData.medications.length > 0 && (
                   <div className="mb-4">
                     <h3 className="text-sm font-medium mb-2">Medications</h3>
                     <div className="border rounded-md overflow-x-auto">
@@ -259,7 +281,7 @@ const Prescription = () => {
                 <div className="mt-8 flex justify-end">
                   <div className="text-center">
                     <div className="h-10 border-b border-dashed border-gray-400 w-40 mb-1"></div>
-                    <p className="text-sm">{doctorInfo.name}</p>
+                    <p className="text-sm">{profile?.name || "Dr. Sarah Johnson"}</p>
                     <p className="text-xs text-gray-500">Signature</p>
                   </div>
                 </div>

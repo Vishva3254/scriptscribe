@@ -8,7 +8,7 @@ import SpeechToTextCard from '@/components/SpeechToTextCard';
 import MedicationCard from '@/components/MedicationCard';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Send } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -102,15 +102,6 @@ const Index = () => {
       toast({
         title: "Missing Information",
         description: "Please provide at least the patient's name and contact number.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (medications.length === 0) {
-      toast({
-        title: "No Medications",
-        description: "Please add at least one medication to the prescription.",
         variant: "destructive"
       });
       return;
