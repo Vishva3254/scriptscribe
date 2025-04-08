@@ -12,7 +12,9 @@ export type Database = {
       profiles: {
         Row: {
           address: string
+          cliniclogo: string | null
           clinicname: string
+          clinicwhatsapp: string | null
           created_at: string
           email: string
           id: string
@@ -25,7 +27,9 @@ export type Database = {
         }
         Insert: {
           address: string
+          cliniclogo?: string | null
           clinicname: string
+          clinicwhatsapp?: string | null
           created_at?: string
           email: string
           id: string
@@ -38,7 +42,9 @@ export type Database = {
         }
         Update: {
           address?: string
+          cliniclogo?: string | null
           clinicname?: string
+          clinicwhatsapp?: string | null
           created_at?: string
           email?: string
           id?: string

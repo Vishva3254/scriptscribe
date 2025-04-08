@@ -97,7 +97,7 @@ const Index = () => {
   };
 
   const viewPrescription = () => {
-    // Validate essential fields before proceeding
+    // Validate essential fields before proceeding - only patient's name and contact are required
     if (!patientInfo.name || !patientInfo.contactNumber) {
       toast({
         title: "Missing Information",
