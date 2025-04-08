@@ -15,11 +15,11 @@ interface UserProfile {
   clinicName: string;
   address: string;
   phone?: string;
-  clinicWhatsApp?: string; // Added field for clinic WhatsApp number
+  clinicWhatsApp?: string;
   qualification?: string;
   registrationNumber?: string;
   profilePic?: string;
-  clinicLogo?: string; // Added field for clinic logo
+  clinicLogo?: string;
   prescriptionStyle?: {
     headerColor: string;
     fontFamily: string;
@@ -103,11 +103,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           clinicName: data.clinicname,
           address: data.address,
           phone: data.phone || undefined,
-          clinicWhatsApp: data.clinicwhatsapp || undefined, // Added field mapping
+          clinicWhatsApp: data.clinicwhatsapp || undefined,
           qualification: data.qualification || undefined,
           registrationNumber: data.registrationnumber || undefined,
           profilePic: data.profilepic || undefined,
-          clinicLogo: data.cliniclogo || undefined, // Added field mapping
+          clinicLogo: data.cliniclogo || undefined,
           prescriptionStyle: data.prescriptionstyle as UserProfile['prescriptionStyle'] || undefined
         };
         setProfile(userProfile);
@@ -259,11 +259,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (updates.clinicName) dbUpdates.clinicname = updates.clinicName;
       if (updates.address) dbUpdates.address = updates.address;
       if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
-      if (updates.clinicWhatsApp !== undefined) dbUpdates.clinicwhatsapp = updates.clinicWhatsApp; // Added field
+      if (updates.clinicWhatsApp !== undefined) dbUpdates.clinicwhatsapp = updates.clinicWhatsApp;
       if (updates.qualification !== undefined) dbUpdates.qualification = updates.qualification;
       if (updates.registrationNumber !== undefined) dbUpdates.registrationnumber = updates.registrationNumber;
       if (updates.profilePic !== undefined) dbUpdates.profilepic = updates.profilePic;
-      if (updates.clinicLogo !== undefined) dbUpdates.cliniclogo = updates.clinicLogo; // Added field
+      if (updates.clinicLogo !== undefined) dbUpdates.cliniclogo = updates.clinicLogo;
       if (updates.prescriptionStyle !== undefined) dbUpdates.prescriptionstyle = updates.prescriptionStyle;
       
       const { error } = await supabase
