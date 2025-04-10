@@ -520,10 +520,10 @@ const DoctorProfile: React.FC = () => {
                       className="p-3 text-white"
                     >
                       <div className="flex items-center justify-between">
-                        {doctorInfo.prescriptionStyle.showLogo && (clinicLogoPreview || profilePicPreview) && (
+                        {doctorInfo.prescriptionStyle.showLogo && (clinicLogoPreview || doctorInfo.profilePic) && (
                           <div className="w-12 h-12 rounded-full overflow-hidden bg-white">
                             <img 
-                              src={clinicLogoPreview || profilePicPreview} 
+                              src={clinicLogoPreview || doctorInfo.profilePic} 
                               alt="Logo" 
                               className="w-full h-full object-cover"
                             />
@@ -588,10 +588,10 @@ const DoctorProfile: React.FC = () => {
                         className="p-4 text-white"
                       >
                         <div className="flex items-center justify-between">
-                          {doctorInfo.prescriptionStyle.showLogo && (clinicLogoPreview || profilePicPreview) && (
+                          {doctorInfo.prescriptionStyle.showLogo && (clinicLogoPreview || doctorInfo.profilePic) && (
                             <div className="w-16 h-16 rounded-full overflow-hidden bg-white">
                               <img 
-                                src={clinicLogoPreview || profilePicPreview} 
+                                src={clinicLogoPreview || doctorInfo.profilePic} 
                                 alt="Logo" 
                                 className="w-full h-full object-cover"
                               />
