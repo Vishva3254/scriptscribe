@@ -90,6 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -101,6 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
         return;
       }
+
+      console.log('Profile data received:', data);
 
       if (data) {
         const userProfile: UserProfile = {
@@ -114,8 +118,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           registrationNumber: data.registrationnumber || undefined,
           profilePic: data.profilepic || undefined,
           clinicLogo: data.cliniclogo || undefined,
-          prescriptionStyle: data.prescriptionstyle as UserProfile['prescriptionStyle'] || undefined
+          prescriptionStyle: data.prescriptionstyle as UserProfile['prescriptionStyle'] || {
+            headerColor: "#1E88E5",
+            fontFamily: "Inter",
+            showLogo: true
+          }
         };
+        console.log('Setting user profile:', userProfile);
         setProfile(userProfile);
       }
       setIsLoading(false);
@@ -267,10 +276,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
-        // Wait for a short time to ensure the user is fully created in auth.users
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('User created:', data.user);
         
-        // Now create the profile using the service role client (bypassing RLS)
+        // Now create the profile
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -301,10 +309,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw profileError;
         }
 
+        console.log('Profile created for user:', data.user.id);
+
         toast({
           title: 'Account created',
           description: 'Your account has been created successfully',
         });
+        
+        // Fetch the profile right after creating it
+        await fetchProfile(data.user.id);
         
         navigate('/');
       }
@@ -334,6 +347,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Fetch profile immediately after successful login
+      if (data.user) {
+        console.log('User logged in:', data.user.id);
+        await fetchProfile(data.user.id);
+      }
+
       toast({
         title: 'Login successful',
         description: 'Welcome back to ScriptScribe',
@@ -355,6 +374,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       await supabase.auth.signOut();
+      
+      // Clear profile data on signout
+      setProfile(null);
       
       toast({
         title: 'Logged out',
@@ -378,6 +400,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       setIsLoading(true);
+      console.log('Updating profile with:', updates);
       
       const dbUpdates: Partial<ProfileRow> = {};
       
@@ -392,6 +415,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (updates.clinicLogo !== undefined) dbUpdates.cliniclogo = updates.clinicLogo;
       if (updates.prescriptionStyle !== undefined) dbUpdates.prescriptionstyle = updates.prescriptionStyle;
       
+      console.log('Database updates:', dbUpdates);
+      
       const { error } = await supabase
         .from('profiles')
         .update(dbUpdates)
@@ -403,17 +428,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           description: error.message,
           variant: 'destructive',
         });
+        console.error('Error updating profile:', error);
         return;
       }
 
-      // Refresh profile data after updating
-      fetchProfile(user.id);
+      console.log('Profile updated successfully');
+      
+      // Update local profile state
+      if (profile) {
+        setProfile({
+          ...profile,
+          ...updates
+        });
+      }
+      
+      // Also refresh profile data from database to ensure we have the latest
+      await fetchProfile(user.id);
       
       toast({
         title: 'Profile updated',
         description: 'Your profile has been updated successfully',
       });
     } catch (error: any) {
+      console.error('Profile update error:', error);
       toast({
         title: 'Unexpected error',
         description: error.message,

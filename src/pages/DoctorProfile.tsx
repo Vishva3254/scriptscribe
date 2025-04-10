@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, User, FileEdit, Save, Check, X, Image } from 'lucide-react';
@@ -36,7 +35,7 @@ const DoctorProfile: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
   const [clinicLogoPreview, setClinicLogoPreview] = useState<string | null>(null);
-  const { profile, updateProfile, uploadProfileImage, uploadClinicLogo, isLoading } = useAuth();
+  const { profile, updateProfile, uploadProfileImage, uploadClinicLogo, isLoading, user } = useAuth();
   
   const [doctorInfo, setDoctorInfo] = useState({
     name: '',
@@ -57,6 +56,8 @@ const DoctorProfile: React.FC = () => {
   });
 
   useEffect(() => {
+    console.log("Profile updated in DoctorProfile component:", profile);
+    
     if (profile) {
       setDoctorInfo({
         name: profile.name || '',
@@ -82,6 +83,17 @@ const DoctorProfile: React.FC = () => {
     }
   }, [profile]);
 
+  useEffect(() => {
+    if (!isLoading && !user) {
+      toast({
+        title: 'Authentication required',
+        description: 'Please log in to view your profile',
+        variant: 'destructive'
+      });
+      navigate('/login');
+    }
+  }, [isLoading, user, navigate, toast]);
+
   const handleProfilePicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -95,24 +107,31 @@ const DoctorProfile: React.FC = () => {
       return;
     }
 
-    // Upload to Supabase storage
-    const imageUrl = await uploadProfileImage(file);
-    
-    if (imageUrl) {
-      setProfilePicPreview(imageUrl);
-      setDoctorInfo(prev => ({
-        ...prev,
-        profilePic: imageUrl
-      }));
+    try {
+      const imageUrl = await uploadProfileImage(file);
       
-      // Update profile directly to save the image URL
-      await updateProfile({
-        profilePic: imageUrl
-      });
-      
+      if (imageUrl) {
+        setProfilePicPreview(imageUrl);
+        setDoctorInfo(prev => ({
+          ...prev,
+          profilePic: imageUrl
+        }));
+        
+        await updateProfile({
+          profilePic: imageUrl
+        });
+        
+        toast({
+          title: "Image uploaded",
+          description: "Your profile picture has been updated",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error uploading profile image:", error);
       toast({
-        title: "Image uploaded",
-        description: "Your profile picture has been updated",
+        title: "Upload failed",
+        description: error.message || "Something went wrong",
+        variant: "destructive"
       });
     }
   };
@@ -130,24 +149,31 @@ const DoctorProfile: React.FC = () => {
       return;
     }
 
-    // Upload to Supabase storage
-    const imageUrl = await uploadClinicLogo(file);
-    
-    if (imageUrl) {
-      setClinicLogoPreview(imageUrl);
-      setDoctorInfo(prev => ({
-        ...prev,
-        clinicLogo: imageUrl
-      }));
+    try {
+      const imageUrl = await uploadClinicLogo(file);
       
-      // Update profile directly to save the logo URL
-      await updateProfile({
-        clinicLogo: imageUrl
-      });
-      
+      if (imageUrl) {
+        setClinicLogoPreview(imageUrl);
+        setDoctorInfo(prev => ({
+          ...prev,
+          clinicLogo: imageUrl
+        }));
+        
+        await updateProfile({
+          clinicLogo: imageUrl
+        });
+        
+        toast({
+          title: "Logo uploaded",
+          description: "Your clinic logo has been updated",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error uploading clinic logo:", error);
       toast({
-        title: "Logo uploaded",
-        description: "Your clinic logo has been updated",
+        title: "Upload failed",
+        description: error.message || "Something went wrong",
+        variant: "destructive"
       });
     }
   };
@@ -170,8 +196,7 @@ const DoctorProfile: React.FC = () => {
     }));
   };
 
-  const handleSave = () => {
-    // Validate required fields
+  const handleSave = async () => {
     if (!doctorInfo.name || !doctorInfo.email) {
       toast({
         title: "Missing required fields",
@@ -181,18 +206,27 @@ const DoctorProfile: React.FC = () => {
       return;
     }
 
-    updateProfile({
-      name: doctorInfo.name,
-      clinicName: doctorInfo.clinicName,
-      address: doctorInfo.address,
-      phone: doctorInfo.phone,
-      clinicWhatsApp: doctorInfo.clinicWhatsApp,
-      qualification: doctorInfo.qualification,
-      registrationNumber: doctorInfo.registrationNumber,
-      prescriptionStyle: doctorInfo.prescriptionStyle
-    });
+    try {
+      await updateProfile({
+        name: doctorInfo.name,
+        clinicName: doctorInfo.clinicName,
+        address: doctorInfo.address,
+        phone: doctorInfo.phone,
+        clinicWhatsApp: doctorInfo.clinicWhatsApp,
+        qualification: doctorInfo.qualification,
+        registrationNumber: doctorInfo.registrationNumber,
+        prescriptionStyle: doctorInfo.prescriptionStyle
+      });
 
-    setIsEditing(false);
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error("Error saving profile:", error);
+      toast({
+        title: "Update failed",
+        description: error.message || "Something went wrong",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCancel = () => {
@@ -211,8 +245,8 @@ const DoctorProfile: React.FC = () => {
         prescriptionStyle: profile.prescriptionStyle || doctorInfo.prescriptionStyle
       });
       
-      setProfilePicPreview(profile.profilePic);
-      setClinicLogoPreview(profile.clinicLogo);
+      setProfilePicPreview(profile.profilePic || null);
+      setClinicLogoPreview(profile.clinicLogo || null);
     }
     
     setIsEditing(false);
@@ -234,6 +268,40 @@ const DoctorProfile: React.FC = () => {
       .toUpperCase();
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-grow container mx-auto px-3 py-4 md:py-6 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg">Loading profile data...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-grow container mx-auto px-3 py-4 md:py-6 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg">No profile data found. Please sign in.</p>
+            <Button 
+              onClick={() => navigate('/login')}
+              className="mt-4"
+            >
+              Go to Login
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -247,7 +315,6 @@ const DoctorProfile: React.FC = () => {
           </TabsList>
           
           <TabsContent value="details" className="space-y-4">
-            {/* Profile Picture and Basic Info */}
             <div className="flex flex-col md:flex-row gap-4">
               <Card className="w-full md:w-1/3">
                 <CardHeader className="pb-2">
@@ -337,7 +404,7 @@ const DoctorProfile: React.FC = () => {
                         type="email"
                         value={doctorInfo.email}
                         onChange={handleChange}
-                        disabled={!isEditing}
+                        disabled={true}
                         required
                       />
                     </div>
