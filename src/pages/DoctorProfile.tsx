@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileEdit, Save, X, Image } from 'lucide-react';
+import { FileEdit, Save, X, Image, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -266,7 +266,18 @@ const DoctorProfile: React.FC = () => {
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-grow container mx-auto px-3 py-4 md:py-6">
-        <h1 className="text-2xl font-bold mb-4">My Profile</h1>
+        <div className="flex items-center mb-4 gap-2">
+          <Button 
+            onClick={() => navigate('/')} 
+            variant="ghost" 
+            size="sm" 
+            className="flex gap-1 items-center"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold">My Profile</h1>
+        </div>
         
         <Tabs defaultValue="details" className="w-full">
           <TabsList className="grid grid-cols-2 mb-4">
@@ -521,11 +532,11 @@ const DoctorProfile: React.FC = () => {
                     >
                       <div className="flex items-center justify-between">
                         {doctorInfo.prescriptionStyle.showLogo && (clinicLogoPreview || doctorInfo.profilePic) && (
-                          <div className="w-12 h-12 rounded-full overflow-hidden bg-white">
+                          <div className="w-16 h-16 rounded-full overflow-hidden bg-white flex items-center justify-center">
                             <img 
                               src={clinicLogoPreview || doctorInfo.profilePic} 
                               alt="Logo" 
-                              className="w-full h-full object-cover"
+                              className="max-w-full max-h-full object-contain"
                             />
                           </div>
                         )}
@@ -589,11 +600,11 @@ const DoctorProfile: React.FC = () => {
                       >
                         <div className="flex items-center justify-between">
                           {doctorInfo.prescriptionStyle.showLogo && (clinicLogoPreview || doctorInfo.profilePic) && (
-                            <div className="w-16 h-16 rounded-full overflow-hidden bg-white">
+                            <div className="w-24 h-24 rounded-lg overflow-hidden bg-white flex items-center justify-center">
                               <img 
                                 src={clinicLogoPreview || doctorInfo.profilePic} 
                                 alt="Logo" 
-                                className="w-full h-full object-cover"
+                                className="max-w-full max-h-full object-contain"
                               />
                             </div>
                           )}

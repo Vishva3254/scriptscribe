@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Download, FileText, Send, ShoppingCart, User } from 'lucide-react';
+import { Download, FileText, Send, ShoppingCart, User, ArrowLeft } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { useAuth } from '@/contexts/AuthContext';
@@ -153,7 +153,18 @@ const Prescription = () => {
       <main className="flex-grow p-3 sm:p-4">
         <div className="w-full max-w-4xl mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-            <h2 className="text-base font-bold text-gray-800">Prescription Details</h2>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => navigate('/')} 
+                variant="ghost" 
+                size="sm" 
+                className="flex gap-1 items-center"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <h2 className="text-base font-bold text-gray-800">Prescription Details</h2>
+            </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               <Button 
                 onClick={downloadPrescription} 
@@ -192,11 +203,11 @@ const Prescription = () => {
                 <div className="text-center border-b pb-4 mb-4">
                   <div className="flex items-center justify-center mb-2">
                     {profile?.prescriptionStyle?.showLogo && profile?.clinicLogo && (
-                      <div className="w-16 h-16 mr-3 overflow-hidden">
+                      <div className="w-24 h-24 mr-4 overflow-hidden flex items-center justify-center">
                         <img 
                           src={profile.clinicLogo} 
                           alt="Clinic Logo" 
-                          className="w-full h-full object-contain"
+                          className="max-w-full max-h-full object-contain"
                         />
                       </div>
                     )}
