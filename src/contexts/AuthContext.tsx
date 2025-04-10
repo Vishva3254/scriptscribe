@@ -1,10 +1,10 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
+import { uploadFile } from '@/integrations/supabase/storage';
 
 // Define types for our user profile based on the Database types
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
@@ -145,41 +145,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const fileExt = file.name.split('.').pop();
       const filePath = `${user.id}/profile-${Date.now()}.${fileExt}`;
       
-      // Upload the file to Supabase storage
-      const { error: uploadError, data } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-        
-      if (uploadError) {
+      // Use the utility function to upload the file
+      const publicUrl = await uploadFile('avatars', filePath, file);
+      
+      if (!publicUrl) {
         toast({
           title: 'Upload failed',
-          description: uploadError.message,
+          description: 'Could not upload profile image',
           variant: 'destructive',
         });
-        setIsLoading(false);
         return null;
       }
       
-      // Get the public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-        
-      if (!publicUrlData.publicUrl) {
-        toast({
-          title: 'URL generation failed',
-          description: 'Could not get public URL for uploaded image',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return null;
-      }
+      // Update the profile with the new image URL
+      await updateProfile({ profilePic: publicUrl });
       
-      // Return the public URL
-      return publicUrlData.publicUrl;
+      return publicUrl;
     } catch (error: any) {
       console.error('Profile image upload error:', error);
       toast({
@@ -204,41 +185,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const fileExt = file.name.split('.').pop();
       const filePath = `${user.id}/clinic-logo-${Date.now()}.${fileExt}`;
       
-      // Upload the file to Supabase storage
-      const { error: uploadError, data } = await supabase.storage
-        .from('logos')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-        
-      if (uploadError) {
+      // Use the utility function to upload the file
+      const publicUrl = await uploadFile('logos', filePath, file);
+      
+      if (!publicUrl) {
         toast({
           title: 'Upload failed',
-          description: uploadError.message,
+          description: 'Could not upload clinic logo',
           variant: 'destructive',
         });
-        setIsLoading(false);
         return null;
       }
       
-      // Get the public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('logos')
-        .getPublicUrl(filePath);
-        
-      if (!publicUrlData.publicUrl) {
-        toast({
-          title: 'URL generation failed',
-          description: 'Could not get public URL for uploaded image',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return null;
-      }
+      // Update the profile with the new logo URL
+      await updateProfile({ clinicLogo: publicUrl });
       
-      // Return the public URL
-      return publicUrlData.publicUrl;
+      return publicUrl;
     } catch (error: any) {
       console.error('Clinic logo upload error:', error);
       toast({

@@ -4,8 +4,8 @@ import { supabase } from './client';
 /**
  * This file contains utility functions for interacting with Supabase Storage
  * 
- * Note: You need to create the storage buckets 'avatars' and 'logos'
- * in your Supabase project before using these functions.
+ * Note: The storage buckets 'avatars' and 'logos' have been created
+ * in the Supabase project with appropriate RLS policies.
  */
 
 /**

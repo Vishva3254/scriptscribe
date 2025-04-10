@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, User, FileEdit, Save, Check, X, Image } from 'lucide-react';
+import { FileEdit, Save, X, Image } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
+import ProfileImageUploader from '@/components/ProfileImageUploader';
 import {
   Dialog,
   DialogContent,
@@ -30,10 +30,8 @@ import { Label } from "@/components/ui/label";
 const DoctorProfile: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
   const [clinicLogoPreview, setClinicLogoPreview] = useState<string | null>(null);
   const { profile, updateProfile, uploadProfileImage, uploadClinicLogo, isLoading, user } = useAuth();
   
@@ -73,10 +71,6 @@ const DoctorProfile: React.FC = () => {
         prescriptionStyle: profile.prescriptionStyle || doctorInfo.prescriptionStyle
       });
       
-      if (profile.profilePic) {
-        setProfilePicPreview(profile.profilePic);
-      }
-      
       if (profile.clinicLogo) {
         setClinicLogoPreview(profile.clinicLogo);
       }
@@ -94,32 +88,15 @@ const DoctorProfile: React.FC = () => {
     }
   }, [isLoading, user, navigate, toast]);
 
-  const handleProfilePicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5000000) { // 5MB limit
-      toast({
-        title: "File too large",
-        description: "Please select an image less than 5MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
+  const handleProfilePicUpload = async (file: File) => {
     try {
       const imageUrl = await uploadProfileImage(file);
       
       if (imageUrl) {
-        setProfilePicPreview(imageUrl);
         setDoctorInfo(prev => ({
           ...prev,
           profilePic: imageUrl
         }));
-        
-        await updateProfile({
-          profilePic: imageUrl
-        });
         
         toast({
           title: "Image uploaded",
@@ -158,10 +135,6 @@ const DoctorProfile: React.FC = () => {
           ...prev,
           clinicLogo: imageUrl
         }));
-        
-        await updateProfile({
-          clinicLogo: imageUrl
-        });
         
         toast({
           title: "Logo uploaded",
@@ -245,27 +218,14 @@ const DoctorProfile: React.FC = () => {
         prescriptionStyle: profile.prescriptionStyle || doctorInfo.prescriptionStyle
       });
       
-      setProfilePicPreview(profile.profilePic || null);
       setClinicLogoPreview(profile.clinicLogo || null);
     }
     
     setIsEditing(false);
   };
 
-  const triggerFileUpload = () => {
-    fileInputRef.current?.click();
-  };
-
   const triggerLogoUpload = () => {
     logoInputRef.current?.click();
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(part => part.charAt(0))
-      .join('')
-      .toUpperCase();
   };
 
   if (isLoading) {
@@ -321,45 +281,12 @@ const DoctorProfile: React.FC = () => {
                   <CardTitle className="text-base">Profile Picture</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center justify-center py-6">
-                  <div className="relative">
-                    <Avatar className="h-32 w-32 mb-4">
-                      {profilePicPreview ? (
-                        <AvatarImage src={profilePicPreview} alt={doctorInfo.name} />
-                      ) : (
-                        <AvatarFallback className="bg-medical-100 text-medical-800 text-3xl">
-                          {doctorInfo.name ? getInitials(doctorInfo.name) : <User className="h-12 w-12" />}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    {isEditing && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="absolute bottom-3 right-0 rounded-full p-1 h-8 w-8" 
-                        onClick={triggerFileUpload}
-                      >
-                        <Camera className="h-4 w-4" />
-                        <span className="sr-only">Upload picture</span>
-                      </Button>
-                    )}
-                  </div>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    accept="image/*" 
-                    onChange={handleProfilePicUpload}
+                  <ProfileImageUploader 
+                    currentImage={doctorInfo.profilePic}
+                    name={doctorInfo.name}
+                    isEditing={isEditing}
+                    onUpload={handleProfilePicUpload}
                   />
-                  {isEditing && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="mt-2" 
-                      onClick={triggerFileUpload}
-                    >
-                      Change Picture
-                    </Button>
-                  )}
                   <h3 className="text-lg font-semibold mt-2">{doctorInfo.name}</h3>
                   <p className="text-gray-600 text-sm">{doctorInfo.qualification}</p>
                 </CardContent>
