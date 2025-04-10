@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Trash } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,9 +20,15 @@ interface MedicationCardProps {
   medications: Medication[];
   addMedication: () => void;
   updateMedication: (id: string, field: string, value: string) => void;
+  removeMedication?: (id: string) => void; // Made optional for backward compatibility
 }
 
-const MedicationCard: React.FC<MedicationCardProps> = ({ medications, addMedication, updateMedication }) => {
+const MedicationCard: React.FC<MedicationCardProps> = ({ 
+  medications, 
+  addMedication, 
+  updateMedication,
+  removeMedication 
+}) => {
   return (
     <Card className="mb-4 w-full">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -35,7 +41,19 @@ const MedicationCard: React.FC<MedicationCardProps> = ({ medications, addMedicat
         <div className="space-y-3">
           {medications.map((medication, index) => (
             <div key={medication.id} className="p-3 border rounded-md bg-gray-50">
-              <h4 className="font-medium mb-2 text-xs sm:text-sm">Medication #{index + 1}</h4>
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-medium text-xs sm:text-sm">Medication #{index + 1}</h4>
+                {removeMedication && (
+                  <Button 
+                    onClick={() => removeMedication(medication.id)} 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash className="h-3.5 w-3.5 mr-1" /> Remove
+                  </Button>
+                )}
+              </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <div className="space-y-1.5">

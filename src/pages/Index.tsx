@@ -63,6 +63,15 @@ const Index = () => {
       )
     );
   };
+  
+  const removeMedication = (id: string) => {
+    setMedications(prev => prev.filter(med => med.id !== id));
+    
+    toast({
+      title: "Medication Removed",
+      description: "The medication has been removed from the prescription."
+    });
+  };
 
   const generatePrescription = () => {
     // Create a formatted prescription
@@ -142,6 +151,7 @@ const Index = () => {
             medications={medications}
             addMedication={addMedication}
             updateMedication={updateMedication}
+            removeMedication={removeMedication}
           />
           
           <div className="mt-3 flex justify-center sm:justify-end flex-wrap gap-2">
