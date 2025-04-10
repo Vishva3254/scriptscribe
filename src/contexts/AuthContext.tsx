@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,6 +36,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  uploadProfileImage: (file: File) => Promise<string | null>;
+  uploadClinicLogo: (file: File) => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -118,6 +121,124 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     } catch (error) {
       console.error('Error in fetchProfile:', error);
+      setIsLoading(false);
+    }
+  };
+
+  // Function to upload profile image to Supabase storage
+  const uploadProfileImage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+    
+    try {
+      setIsLoading(true);
+      
+      // Create a unique file path
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/profile-${Date.now()}.${fileExt}`;
+      
+      // Upload the file to Supabase storage
+      const { error: uploadError, data } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+        
+      if (uploadError) {
+        toast({
+          title: 'Upload failed',
+          description: uploadError.message,
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return null;
+      }
+      
+      // Get the public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+        
+      if (!publicUrlData.publicUrl) {
+        toast({
+          title: 'URL generation failed',
+          description: 'Could not get public URL for uploaded image',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return null;
+      }
+      
+      // Return the public URL
+      return publicUrlData.publicUrl;
+    } catch (error: any) {
+      console.error('Profile image upload error:', error);
+      toast({
+        title: 'Upload error',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Function to upload clinic logo to Supabase storage
+  const uploadClinicLogo = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+    
+    try {
+      setIsLoading(true);
+      
+      // Create a unique file path
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/clinic-logo-${Date.now()}.${fileExt}`;
+      
+      // Upload the file to Supabase storage
+      const { error: uploadError, data } = await supabase.storage
+        .from('logos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+        
+      if (uploadError) {
+        toast({
+          title: 'Upload failed',
+          description: uploadError.message,
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return null;
+      }
+      
+      // Get the public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('logos')
+        .getPublicUrl(filePath);
+        
+      if (!publicUrlData.publicUrl) {
+        toast({
+          title: 'URL generation failed',
+          description: 'Could not get public URL for uploaded image',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return null;
+      }
+      
+      // Return the public URL
+      return publicUrlData.publicUrl;
+    } catch (error: any) {
+      console.error('Clinic logo upload error:', error);
+      toast({
+        title: 'Upload error',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
       setIsLoading(false);
     }
   };
@@ -311,7 +432,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signOut,
-    updateProfile
+    updateProfile,
+    uploadProfileImage,
+    uploadClinicLogo
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

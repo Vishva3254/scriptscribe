@@ -36,7 +36,7 @@ const DoctorProfile: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
   const [clinicLogoPreview, setClinicLogoPreview] = useState<string | null>(null);
-  const { profile, updateProfile } = useAuth();
+  const { profile, updateProfile, uploadProfileImage, uploadClinicLogo, isLoading } = useAuth();
   
   const [doctorInfo, setDoctorInfo] = useState({
     name: '',
@@ -44,11 +44,11 @@ const DoctorProfile: React.FC = () => {
     clinicName: '',
     address: '',
     phone: '',
-    clinicWhatsApp: '', // Added field
+    clinicWhatsApp: '', 
     qualification: '',
     registrationNumber: '',
     profilePic: null as string | null,
-    clinicLogo: null as string | null, // Added field
+    clinicLogo: null as string | null,
     prescriptionStyle: {
       headerColor: '#1E88E5',
       fontFamily: 'Inter',
@@ -64,11 +64,11 @@ const DoctorProfile: React.FC = () => {
         clinicName: profile.clinicName || '',
         address: profile.address || '',
         phone: profile.phone || '',
-        clinicWhatsApp: profile.clinicWhatsApp || '', // Added field
+        clinicWhatsApp: profile.clinicWhatsApp || '',
         qualification: profile.qualification || '',
         registrationNumber: profile.registrationNumber || '',
         profilePic: profile.profilePic || null,
-        clinicLogo: profile.clinicLogo || null, // Added field
+        clinicLogo: profile.clinicLogo || null,
         prescriptionStyle: profile.prescriptionStyle || doctorInfo.prescriptionStyle
       });
       
@@ -82,7 +82,7 @@ const DoctorProfile: React.FC = () => {
     }
   }, [profile]);
 
-  const handleProfilePicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -95,19 +95,29 @@ const DoctorProfile: React.FC = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setProfilePicPreview(result);
+    // Upload to Supabase storage
+    const imageUrl = await uploadProfileImage(file);
+    
+    if (imageUrl) {
+      setProfilePicPreview(imageUrl);
       setDoctorInfo(prev => ({
         ...prev,
-        profilePic: result
+        profilePic: imageUrl
       }));
-    };
-    reader.readAsDataURL(file);
+      
+      // Update profile directly to save the image URL
+      await updateProfile({
+        profilePic: imageUrl
+      });
+      
+      toast({
+        title: "Image uploaded",
+        description: "Your profile picture has been updated",
+      });
+    }
   };
 
-  const handleClinicLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleClinicLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -120,16 +130,26 @@ const DoctorProfile: React.FC = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setClinicLogoPreview(result);
+    // Upload to Supabase storage
+    const imageUrl = await uploadClinicLogo(file);
+    
+    if (imageUrl) {
+      setClinicLogoPreview(imageUrl);
       setDoctorInfo(prev => ({
         ...prev,
-        clinicLogo: result
+        clinicLogo: imageUrl
       }));
-    };
-    reader.readAsDataURL(file);
+      
+      // Update profile directly to save the logo URL
+      await updateProfile({
+        clinicLogo: imageUrl
+      });
+      
+      toast({
+        title: "Logo uploaded",
+        description: "Your clinic logo has been updated",
+      });
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -166,11 +186,9 @@ const DoctorProfile: React.FC = () => {
       clinicName: doctorInfo.clinicName,
       address: doctorInfo.address,
       phone: doctorInfo.phone,
-      clinicWhatsApp: doctorInfo.clinicWhatsApp, // Added field
+      clinicWhatsApp: doctorInfo.clinicWhatsApp,
       qualification: doctorInfo.qualification,
       registrationNumber: doctorInfo.registrationNumber,
-      profilePic: doctorInfo.profilePic,
-      clinicLogo: doctorInfo.clinicLogo, // Added field
       prescriptionStyle: doctorInfo.prescriptionStyle
     });
 
@@ -185,11 +203,11 @@ const DoctorProfile: React.FC = () => {
         clinicName: profile.clinicName || '',
         address: profile.address || '',
         phone: profile.phone || '',
-        clinicWhatsApp: profile.clinicWhatsApp || '', // Added field
+        clinicWhatsApp: profile.clinicWhatsApp || '',
         qualification: profile.qualification || '',
         registrationNumber: profile.registrationNumber || '',
         profilePic: profile.profilePic || null,
-        clinicLogo: profile.clinicLogo || null, // Added field
+        clinicLogo: profile.clinicLogo || null,
         prescriptionStyle: profile.prescriptionStyle || doctorInfo.prescriptionStyle
       });
       
