@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -5,10 +6,11 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Download, FileText, Send, ShoppingCart, User, ArrowLeft, Share2 } from 'lucide-react';
+import { Download, FileText, Send, ShoppingCart, User, ArrowLeft, Share2, Printer } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
 
 const Prescription = () => {
   const navigate = useNavigate();
@@ -17,6 +19,17 @@ const Prescription = () => {
   const [loading, setLoading] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const { profile } = useAuth();
+
+  // Format the date as DD/MM/YYYY
+  const formatDateString = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      return format(date, 'dd/MM/yyyy');
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return dateString;
+    }
+  };
 
   // Get prescription data from location state or use default values
   const prescriptionData = location.state?.prescriptionData || {
@@ -47,6 +60,9 @@ const Prescription = () => {
     ],
     date: new Date().toLocaleDateString()
   };
+
+  // Format the prescription date
+  const formattedDate = formatDateString(prescriptionData.date);
 
   // Generate PDF on component mount to have it ready for sharing
   useEffect(() => {
@@ -90,10 +106,10 @@ const Prescription = () => {
       pdf.setFont('helvetica', 'bold');
       pdf.text('PRESCRIPTION', margin, margin + 35);
       
-      // Add date
+      // Add date in DD/MM/YYYY format
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Date: ${prescriptionData.date}`, pageWidth - margin - 30, margin + 35, { align: 'right' });
+      pdf.text(`Date: ${formattedDate}`, pageWidth - margin - 30, margin + 35, { align: 'right' });
       
       // Add patient information section
       pdf.setFillColor(245, 245, 245);
@@ -241,6 +257,62 @@ const Prescription = () => {
     }
   };
 
+  const printPrescription = async () => {
+    setLoading(true);
+    try {
+      let url = pdfUrl;
+      
+      // If PDF URL doesn't exist yet, generate it
+      if (!url) {
+        url = await generatePDF();
+      }
+      
+      if (!url) {
+        throw new Error("Failed to generate PDF");
+      }
+      
+      // Open the PDF in a new window and print it
+      const printWindow = window.open(url, '_blank');
+      
+      if (!printWindow) {
+        throw new Error("Failed to open print window. Please check your popup blocker settings.");
+      }
+      
+      // Wait for PDF to load before printing
+      printWindow.addEventListener('load', () => {
+        try {
+          printWindow.print();
+          toast({
+            title: "Printing Prescription",
+            description: "The print dialog has been opened.",
+          });
+        } catch (printError) {
+          console.error("Error during printing:", printError);
+          toast({
+            title: "Print Failed",
+            description: "There was an error while trying to print. Please try again.",
+            variant: "destructive",
+          });
+        }
+        setLoading(false);
+      }, { once: true });
+      
+      // Fallback in case load event doesn't fire
+      setTimeout(() => {
+        if (loading) setLoading(false);
+      }, 2000);
+      
+    } catch (error) {
+      console.error("Error printing prescription:", error);
+      toast({
+        title: "Print Failed",
+        description: "There was an error preparing the prescription for printing. Please try again.",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
+
   const shareViaWhatsApp = async (recipient: 'patient' | 'medicalShop') => {
     setLoading(true);
     try {
@@ -375,7 +447,17 @@ const Prescription = () => {
                 className="bg-medical-600 hover:bg-medical-700 flex-1 sm:flex-initial"
               >
                 <Download className="mr-1.5 h-3.5 w-3.5" />
-                {loading ? 'Processing...' : 'Download PDF'}
+                {loading ? 'Processing...' : 'Download'}
+              </Button>
+              <Button 
+                onClick={printPrescription} 
+                disabled={loading} 
+                size="sm"
+                variant="secondary"
+                className="flex-1 sm:flex-initial"
+              >
+                <Printer className="mr-1.5 h-3.5 w-3.5" />
+                {loading ? 'Processing...' : 'Print'}
               </Button>
               <Button 
                 onClick={() => shareViaWhatsApp('patient')} 
@@ -431,7 +513,7 @@ const Prescription = () => {
                     <span className="font-medium">Prescription</span>
                   </div>
                   <div className="text-sm">
-                    Date: <span className="font-medium">{prescriptionData.date}</span>
+                    Date: <span className="font-medium">{formattedDate}</span>
                   </div>
                 </div>
                 
