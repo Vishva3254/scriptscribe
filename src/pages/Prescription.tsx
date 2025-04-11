@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Download, FileText, Send, ShoppingCart, User, ArrowLeft } from 'lucide-react';
+import { Download, FileText, Send, ShoppingCart, User, ArrowLeft, Share2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +16,7 @@ const Prescription = () => {
   const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const { profile } = useAuth();
 
   // Get prescription data from location state or use default values
@@ -48,26 +49,80 @@ const Prescription = () => {
     date: new Date().toLocaleDateString()
   };
 
-  const downloadPrescription = async () => {
+  // Generate PDF on component mount to have it ready for sharing
+  useEffect(() => {
+    generatePDF();
+  }, []);
+
+  const generatePDF = async (): Promise<string | null> => {
     setLoading(true);
     try {
       const element = document.getElementById('prescription-to-print');
-      if (!element) return;
+      if (!element) return null;
       
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 2, // Higher scale for better quality
         useCORS: true,
-        logging: false
+        logging: false,
+        // Set dimensions to ensure full A4 capture
+        width: element.offsetWidth,
+        height: element.offsetHeight,
+        windowWidth: element.offsetWidth,
+        windowHeight: element.offsetHeight
       });
       
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`prescription_${prescriptionData.patientInfo.name.replace(/\s+/g, '_')}.pdf`);
+      // Use A4 dimensions (210 x 297 mm)
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Calculate the aspect ratio to fit the image into A4 format
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      
+      // Center the image on the page
+      const x = (pdfWidth - imgWidth * ratio) / 2;
+      const y = 0; // Start from the top
+      
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth * ratio, imgHeight * ratio);
+      
+      // Create PDF URL for sharing
+      const pdfBlob = pdf.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      setPdfUrl(url);
+      
+      setLoading(false);
+      return url;
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      setLoading(false);
+      return null;
+    }
+  };
+
+  const downloadPrescription = async () => {
+    setLoading(true);
+    try {
+      let url = pdfUrl;
+      
+      // If PDF URL doesn't exist yet, generate it
+      if (!url) {
+        url = await generatePDF();
+      }
+      
+      if (!url) {
+        throw new Error("Failed to generate PDF");
+      }
+      
+      // Create a download link and trigger it
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `prescription_${prescriptionData.patientInfo.name.replace(/\s+/g, '_')}.pdf`;
+      link.click();
       
       toast({
         title: "Prescription Downloaded",
@@ -85,66 +140,99 @@ const Prescription = () => {
     }
   };
 
-  const shareViaWhatsApp = (recipient: 'patient' | 'medicalShop') => {
-    const { patientInfo, medications } = prescriptionData;
-    
-    let message = `*Prescription from ${profile?.clinicName || 'Doctor'}*\n\n`;
-    message += `*Dr:* ${profile?.name || 'Doctor'}\n`;
-    message += `*Date:* ${prescriptionData.date}\n\n`;
-    message += `*Patient:* ${patientInfo.name}\n`;
-    message += `*Age/Gender:* ${patientInfo.age}/${patientInfo.gender}\n\n`;
-    
-    if (prescriptionData.prescriptionText) {
-      message += `*Doctor's Notes:*\n${prescriptionData.prescriptionText}\n\n`;
-    }
-    
-    if (medications && medications.length > 0) {
-      message += `*MEDICATIONS:*\n`;
-      medications.forEach((med, idx) => {
-        message += `${idx + 1}. ${med.name} - ${med.dosage}\n`;
-        message += `   Frequency: ${med.frequency}\n`;
-        message += `   Duration: ${med.duration}\n`;
-        if (med.instructions) {
-          message += `   Instructions: ${med.instructions}\n`;
+  const shareViaWhatsApp = async (recipient: 'patient' | 'medicalShop') => {
+    setLoading(true);
+    try {
+      let url = pdfUrl;
+      
+      // If PDF URL doesn't exist yet, generate it
+      if (!url) {
+        url = await generatePDF();
+      }
+      
+      if (!url) {
+        throw new Error("Failed to generate PDF");
+      }
+      
+      // First approach: try to share using the Web Share API if available
+      if (navigator.share && navigator.canShare) {
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          const file = new File([blob], `prescription_${prescriptionData.patientInfo.name.replace(/\s+/g, '_')}.pdf`, { type: 'application/pdf' });
+          
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: 'Prescription',
+              text: `Prescription for ${prescriptionData.patientInfo.name}`,
+              files: [file]
+            });
+            
+            toast({
+              title: "Sharing Successful",
+              description: "The prescription has been shared successfully.",
+            });
+            return;
+          }
+        } catch (error) {
+          console.log("Web Share API failed, falling back to WhatsApp:", error);
+          // Fall back to WhatsApp approach
         }
-        message += `\n`;
-      });
-    }
-    
-    message += `For any queries, please contact: ${profile?.phone || 'the doctor'}`;
-    
-    // Encode the message for the URL
-    const encodedMessage = encodeURIComponent(message);
-    
-    // Get the appropriate number based on recipient type
-    let phoneNumber = '';
-    if (recipient === 'patient') {
-      phoneNumber = patientInfo.contactNumber;
-    } else if (recipient === 'medicalShop') {
-      phoneNumber = profile?.clinicWhatsApp || '';
-    }
-    
-    // Remove non-digit characters from the phone number
-    const cleanPhone = phoneNumber.replace(/\D+/g, '');
-    
-    if (!cleanPhone) {
+      }
+      
+      // Fallback: Create a message for WhatsApp with a link to view the prescription
+      // Get the appropriate number based on recipient type
+      let phoneNumber = '';
+      if (recipient === 'patient') {
+        phoneNumber = prescriptionData.patientInfo.contactNumber;
+      } else if (recipient === 'medicalShop') {
+        phoneNumber = profile?.clinicWhatsApp || '';
+      }
+      
+      // Remove non-digit characters from the phone number
+      const cleanPhone = phoneNumber.replace(/\D+/g, '');
+      
+      if (!cleanPhone) {
+        toast({
+          title: recipient === 'medicalShop' ? "Medical Shop WhatsApp Not Set" : "Patient Phone Missing",
+          description: recipient === 'medicalShop' 
+            ? "Please add a medical shop WhatsApp number in your profile settings."
+            : "Patient's contact number is missing.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Create a message with prescription details
+      let message = `*Prescription from ${profile?.clinicName || 'Doctor'}*\n\n`;
+      message += `*Dr:* ${profile?.name || 'Doctor'}\n`;
+      message += `*Date:* ${prescriptionData.date}\n\n`;
+      message += `*Patient:* ${prescriptionData.patientInfo.name}\n`;
+      message += `*Age/Gender:* ${prescriptionData.patientInfo.age}/${prescriptionData.patientInfo.gender}\n\n`;
+      
+      // Add note that PDF is attached/shared
+      message += `Please find the attached prescription PDF or download it from the provided link.\n\n`;
+      
+      // Encode the message for the URL
+      const encodedMessage = encodeURIComponent(message);
+      
+      const whatsappURL = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+      window.open(whatsappURL, '_blank');
+      
       toast({
-        title: recipient === 'medicalShop' ? "Medical Shop WhatsApp Not Set" : "Patient Phone Missing",
-        description: recipient === 'medicalShop' 
-          ? "Please add a medical shop WhatsApp number in your profile settings."
-          : "Patient's contact number is missing.",
-        variant: "destructive"
+        title: "WhatsApp Opening",
+        description: `Opening WhatsApp to share prescription with ${recipient === 'medicalShop' ? 'medical shop' : 'patient'}.`,
       });
-      return;
+    } catch (error) {
+      console.error("Error sharing prescription:", error);
+      toast({
+        title: "Sharing Failed",
+        description: "There was an error sharing the prescription. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    
-    const whatsappURL = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-    window.open(whatsappURL, '_blank');
-    
-    toast({
-      title: "WhatsApp Sharing",
-      description: `Opening WhatsApp to share with ${recipient === 'medicalShop' ? 'medical shop' : 'patient'}.`,
-    });
   };
 
   return (
@@ -173,15 +261,16 @@ const Prescription = () => {
                 className="bg-medical-600 hover:bg-medical-700 flex-1 sm:flex-initial"
               >
                 <Download className="mr-1.5 h-3.5 w-3.5" />
-                {loading ? 'Downloading...' : 'Download PDF'}
+                {loading ? 'Processing...' : 'Download PDF'}
               </Button>
               <Button 
                 onClick={() => shareViaWhatsApp('patient')} 
                 variant="outline" 
                 size="sm" 
                 className="flex-1 sm:flex-initial"
+                disabled={loading}
               >
-                <User className="mr-1.5 h-3.5 w-3.5" />
+                <Share2 className="mr-1.5 h-3.5 w-3.5" />
                 Share with Patient
               </Button>
               <Button 
@@ -189,6 +278,7 @@ const Prescription = () => {
                 variant="outline" 
                 size="sm" 
                 className="flex-1 sm:flex-initial"
+                disabled={loading}
               >
                 <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
                 Share with Medical Shop
@@ -201,9 +291,9 @@ const Prescription = () => {
               <div id="prescription-to-print" className="p-4 sm:p-6 bg-white">
                 {/* Clinic Header */}
                 <div className="text-center border-b pb-4 mb-4">
-                  <div className="flex items-center justify-center mb-2">
+                  <div className="flex items-center mb-2">
                     {profile?.prescriptionStyle?.showLogo && profile?.clinicLogo && (
-                      <div className="w-24 h-24 mr-4 overflow-hidden flex items-center justify-center">
+                      <div className="w-32 h-32 mr-4 flex items-center justify-center">
                         <img 
                           src={profile.clinicLogo} 
                           alt="Clinic Logo" 
@@ -211,13 +301,13 @@ const Prescription = () => {
                         />
                       </div>
                     )}
-                    <div>
+                    <div className="flex-1">
                       <h1 className="text-xl font-bold text-medical-700">{profile?.clinicName || "City Health Clinic"}</h1>
                       <p className="text-sm text-gray-600">{profile?.name || "Dr. Sarah Johnson"}</p>
+                      <p className="text-xs text-gray-500">{profile?.address || "123 Medical Street, Healthcare City, HC 12345"}</p>
+                      <p className="text-xs text-gray-500">Phone: {profile?.phone || "+1 (555) 123-4567"} | Email: {profile?.email || "dr.johnson@cityhealthclinic.com"}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500">{profile?.address || "123 Medical Street, Healthcare City, HC 12345"}</p>
-                  <p className="text-xs text-gray-500">Phone: {profile?.phone || "+1 (555) 123-4567"} | Email: {profile?.email || "dr.johnson@cityhealthclinic.com"}</p>
                 </div>
                 
                 {/* Prescription Title & Date */}
