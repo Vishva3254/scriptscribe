@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,7 +33,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         toast({
           title: "Session expiring soon",
           description: `Your session will expire in ${minutesRemaining} minute${minutesRemaining !== 1 ? 's' : ''}. Please save your work.`,
-          variant: "warning",
+          variant: "default",
         });
       }
     }
