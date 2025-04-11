@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -7,12 +7,14 @@ import PatientInfoCard from '@/components/PatientInfoCard';
 import SpeechToTextCard from '@/components/SpeechToTextCard';
 import MedicationCard from '@/components/MedicationCard';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, Send } from 'lucide-react';
+import { FileText, Download, LogIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, isLoading, sessionExpiresAt } = useAuth();
   const [patientInfo, setPatientInfo] = useState({
     name: '',
     age: '',
@@ -30,6 +32,32 @@ const Index = () => {
     duration: string;
     instructions: string;
   }>>([]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/login');
+    }
+  }, [user, isLoading, navigate]);
+
+  // Show session expiry notification
+  useEffect(() => {
+    if (sessionExpiresAt) {
+      const currentTime = new Date();
+      const timeRemaining = sessionExpiresAt.getTime() - currentTime.getTime();
+      
+      // Show a notification when there's less than 5 minutes left
+      const fiveMinutesInMs = 5 * 60 * 1000;
+      if (timeRemaining > 0 && timeRemaining < fiveMinutesInMs) {
+        const minutesRemaining = Math.floor(timeRemaining / 60000);
+        toast({
+          title: "Session expiring soon",
+          description: `Your session will expire in ${minutesRemaining} minute${minutesRemaining !== 1 ? 's' : ''}. Please save your work and re-login.`,
+          duration: 10000, // Show for 10 seconds
+        });
+      }
+    }
+  }, [sessionExpiresAt, toast]);
 
   const updatePatientInfo = (field: string, value: string) => {
     setPatientInfo(prev => ({
@@ -74,6 +102,16 @@ const Index = () => {
   };
 
   const generatePrescription = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to create prescriptions.",
+        variant: "destructive"
+      });
+      navigate('/login');
+      return;
+    }
+
     // Create a formatted prescription
     let fullPrescription = `Prescription for ${patientInfo.name}\n`;
     fullPrescription += `Age: ${patientInfo.age} | Gender: ${patientInfo.gender}\n`;
@@ -106,6 +144,16 @@ const Index = () => {
   };
 
   const viewPrescription = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to view prescriptions.",
+        variant: "destructive"
+      });
+      navigate('/login');
+      return;
+    }
+
     // Validate essential fields before proceeding - only patient's name and contact are required
     if (!patientInfo.name || !patientInfo.contactNumber) {
       toast({
@@ -129,6 +177,49 @@ const Index = () => {
     });
   };
 
+  // If still loading, show loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50">
+        <Header />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="text-center p-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-medical-500 border-t-transparent mb-4"></div>
+            <p>Loading...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // If not authenticated, show login prompt
+  if (!user) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50">
+        <Header />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="text-center p-8 max-w-md">
+            <div className="mb-6">
+              <FileText className="mx-auto h-16 w-16 text-medical-500 mb-4" />
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">Welcome to ScriptScribe</h1>
+              <p className="text-gray-600 mb-4">Create and manage your prescriptions with ease</p>
+            </div>
+            <Button onClick={() => navigate('/login')} className="w-full mb-2">
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign In to Continue
+            </Button>
+            <p className="text-sm text-gray-500 mt-4">
+              Don't have an account? <Button variant="link" className="p-0" onClick={() => navigate('/signup')}>Sign Up</Button>
+            </p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Main content when authenticated
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 w-full max-w-full overflow-x-hidden">
       <Header />

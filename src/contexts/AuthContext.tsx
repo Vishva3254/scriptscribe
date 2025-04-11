@@ -38,15 +38,20 @@ interface AuthContextType {
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   uploadProfileImage: (file: File) => Promise<string | null>;
   uploadClinicLogo: (file: File) => Promise<string | null>;
+  sessionExpiresAt: Date | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Session duration in seconds (24 hours)
+const SESSION_DURATION = 24 * 60 * 60;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<Date | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -60,33 +65,95 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
-        // If we have a user, fetch their profile using setTimeout to avoid deadlocks
-        if (newSession?.user) {
+        if (newSession) {
+          // Calculate and set session expiry time
+          const expiryTime = new Date();
+          expiryTime.setSeconds(expiryTime.getSeconds() + SESSION_DURATION);
+          setSessionExpiresAt(expiryTime);
+          
+          // Store expiry time in localStorage to persist across page reloads
+          localStorage.setItem('sessionExpiryTime', expiryTime.toISOString());
+          
+          // If we have a user, fetch their profile using setTimeout to avoid deadlocks
           setTimeout(() => {
             fetchProfile(newSession.user.id);
           }, 0);
         } else {
           setProfile(null);
+          localStorage.removeItem('sessionExpiryTime');
+          setSessionExpiresAt(null);
         }
       }
     );
 
-    // Then check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
+        // Check if session has expired based on our custom expiry time
+        const storedExpiryTime = localStorage.getItem('sessionExpiryTime');
+        
+        if (storedExpiryTime) {
+          const expiryTime = new Date(storedExpiryTime);
+          const currentTime = new Date();
+          
+          if (currentTime > expiryTime) {
+            // Session has expired, sign out the user
+            console.log('Session expired, signing out...');
+            supabase.auth.signOut().then(() => {
+              toast({
+                title: 'Session expired',
+                description: 'Please sign in again to continue.',
+              });
+              navigate('/login');
+            });
+            return;
+          }
+          
+          // Session still valid, set the expiry time
+          setSessionExpiresAt(expiryTime);
+        } else {
+          // No stored expiry time, set a new one
+          const expiryTime = new Date();
+          expiryTime.setSeconds(expiryTime.getSeconds() + SESSION_DURATION);
+          setSessionExpiresAt(expiryTime);
+          localStorage.setItem('sessionExpiryTime', expiryTime.toISOString());
+        }
+        
         fetchProfile(currentSession.user.id);
       } else {
         setIsLoading(false);
       }
     });
 
+    // Set up a timer to check session expiry every minute
+    const intervalId = setInterval(() => {
+      const storedExpiryTime = localStorage.getItem('sessionExpiryTime');
+      
+      if (storedExpiryTime && user) {
+        const expiryTime = new Date(storedExpiryTime);
+        const currentTime = new Date();
+        
+        if (currentTime > expiryTime) {
+          console.log('Session expired during active use, signing out...');
+          supabase.auth.signOut().then(() => {
+            toast({
+              title: 'Session expired',
+              description: 'Please sign in again to continue.',
+            });
+            navigate('/login');
+          });
+        }
+      }
+    }, 60000); // Check every minute
+
     return () => {
       subscription.unsubscribe();
+      clearInterval(intervalId);
     };
-  }, []);
+  }, [navigate, toast]);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -134,7 +201,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Function to upload profile image to Supabase storage
   const uploadProfileImage = async (file: File): Promise<string | null> => {
     if (!user) return null;
     
@@ -173,8 +239,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   };
-  
-  // Function to upload clinic logo to Supabase storage
+
   const uploadClinicLogo = async (file: File): Promise<string | null> => {
     if (!user) return null;
     
@@ -309,6 +374,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Set session expiry time (24 hours from now)
+      const expiryTime = new Date();
+      expiryTime.setSeconds(expiryTime.getSeconds() + SESSION_DURATION);
+      setSessionExpiresAt(expiryTime);
+      localStorage.setItem('sessionExpiryTime', expiryTime.toISOString());
+
       // Fetch profile immediately after successful login
       if (data.user) {
         console.log('User logged in:', data.user.id);
@@ -336,6 +407,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       await supabase.auth.signOut();
+      
+      // Clear session expiry data
+      localStorage.removeItem('sessionExpiryTime');
+      setSessionExpiresAt(null);
       
       // Clear profile data on signout
       setProfile(null);
@@ -433,7 +508,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     updateProfile,
     uploadProfileImage,
-    uploadClinicLogo
+    uploadClinicLogo,
+    sessionExpiresAt
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
