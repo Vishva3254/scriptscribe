@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -6,6 +5,7 @@ import Footer from '@/components/Footer';
 import PatientInfoCard from '@/components/PatientInfoCard';
 import SpeechToTextCard from '@/components/SpeechToTextCard';
 import MedicationCard from '@/components/MedicationCard';
+import LoadingScreen from '@/components/LoadingScreen';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, LogIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -33,27 +33,24 @@ const Index = () => {
     instructions: string;
   }>>([]);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !user) {
       navigate('/login');
     }
   }, [user, isLoading, navigate]);
 
-  // Show session expiry notification
   useEffect(() => {
     if (sessionExpiresAt) {
       const currentTime = new Date();
       const timeRemaining = sessionExpiresAt.getTime() - currentTime.getTime();
       
-      // Show a notification when there's less than 5 minutes left
       const fiveMinutesInMs = 5 * 60 * 1000;
       if (timeRemaining > 0 && timeRemaining < fiveMinutesInMs) {
         const minutesRemaining = Math.floor(timeRemaining / 60000);
         toast({
           title: "Session expiring soon",
           description: `Your session will expire in ${minutesRemaining} minute${minutesRemaining !== 1 ? 's' : ''}. Please save your work and re-login.`,
-          duration: 10000, // Show for 10 seconds
+          duration: 10000,
         });
       }
     }
@@ -112,7 +109,6 @@ const Index = () => {
       return;
     }
 
-    // Create a formatted prescription
     let fullPrescription = `Prescription for ${patientInfo.name}\n`;
     fullPrescription += `Age: ${patientInfo.age} | Gender: ${patientInfo.gender}\n`;
     fullPrescription += `Contact: ${patientInfo.contactNumber}\n\n`;
@@ -134,7 +130,6 @@ const Index = () => {
       });
     }
     
-    // Copy to clipboard
     navigator.clipboard.writeText(fullPrescription);
     
     toast({
@@ -154,7 +149,6 @@ const Index = () => {
       return;
     }
 
-    // Validate essential fields before proceeding - only patient's name and contact are required
     if (!patientInfo.name || !patientInfo.contactNumber) {
       toast({
         title: "Missing Information",
@@ -164,7 +158,6 @@ const Index = () => {
       return;
     }
     
-    // Navigate to prescription page with the data
     navigate('/prescription', { 
       state: { 
         prescriptionData: {
@@ -177,23 +170,10 @@ const Index = () => {
     });
   };
 
-  // If still loading, show loading state
   if (isLoading) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Header />
-        <main className="flex-grow flex items-center justify-center">
-          <div className="text-center p-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-medical-500 border-t-transparent mb-4"></div>
-            <p>Loading...</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
-  // If not authenticated, show login prompt
   if (!user) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -219,7 +199,6 @@ const Index = () => {
     );
   }
 
-  // Main content when authenticated
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 w-full max-w-full overflow-x-hidden">
       <Header />
