@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -57,38 +56,140 @@ const Prescription = () => {
   const generatePDF = async (): Promise<string | null> => {
     setLoading(true);
     try {
-      const element = document.getElementById('prescription-to-print');
-      if (!element) return null;
-      
-      const canvas = await html2canvas(element, {
-        scale: 2, // Higher scale for better quality
-        useCORS: true,
-        logging: false,
-        // Set dimensions to ensure full A4 capture
-        width: element.offsetWidth,
-        height: element.offsetHeight,
-        windowWidth: element.offsetWidth,
-        windowHeight: element.offsetHeight
+      // Create a new jsPDF instance with A4 dimensions
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
       });
       
-      const imgData = canvas.toDataURL('image/png');
+      // Define A4 dimensions in mm
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10; // margin in mm
       
-      // Use A4 dimensions (210 x 297 mm)
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      // Add hospital/clinic header
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(profile?.clinicName || "City Health Clinic", pageWidth / 2, margin + 5, { align: 'center' });
       
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      // Add doctor information
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Dr. ${profile?.name || "Sarah Johnson"}`, pageWidth / 2, margin + 12, { align: 'center' });
+      pdf.setFontSize(9);
+      pdf.text(profile?.address || "123 Medical Street, Healthcare City, HC 12345", pageWidth / 2, margin + 17, { align: 'center' });
+      pdf.text(`Phone: ${profile?.phone || "+1 (555) 123-4567"} | Email: ${profile?.email || "dr.johnson@cityhealthclinic.com"}`, pageWidth / 2, margin + 22, { align: 'center' });
       
-      // Calculate the aspect ratio to fit the image into A4 format
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      // Add horizontal line
+      pdf.setDrawColor(100, 100, 100);
+      pdf.line(margin, margin + 25, pageWidth - margin, margin + 25);
       
-      // Center the image on the page
-      const x = (pdfWidth - imgWidth * ratio) / 2;
-      const y = 0; // Start from the top
+      // Add Prescription title
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('PRESCRIPTION', margin, margin + 35);
       
-      pdf.addImage(imgData, 'PNG', x, y, imgWidth * ratio, imgHeight * ratio);
+      // Add date
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Date: ${prescriptionData.date}`, pageWidth - margin - 30, margin + 35, { align: 'right' });
+      
+      // Add patient information section
+      pdf.setFillColor(245, 245, 245);
+      pdf.rect(margin, margin + 40, pageWidth - (margin * 2), 20, 'F');
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Patient Details:', margin + 2, margin + 46);
+      
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Name: ${prescriptionData.patientInfo.name}`, margin + 2, margin + 52);
+      pdf.text(`Age/Gender: ${prescriptionData.patientInfo.age}/${prescriptionData.patientInfo.gender}`, margin + 80, margin + 52);
+      pdf.text(`Contact: ${prescriptionData.patientInfo.contactNumber}`, margin + 2, margin + 58);
+      
+      // Add doctor's notes
+      let currentY = margin + 70;
+      
+      if (prescriptionData.prescriptionText) {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text("Doctor's Notes:", margin, currentY);
+        
+        currentY += 6;
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        
+        // Handle text wrapping for doctor's notes
+        const splitText = pdf.splitTextToSize(prescriptionData.prescriptionText, pageWidth - (margin * 2));
+        pdf.text(splitText, margin, currentY);
+        
+        currentY += (splitText.length * 4) + 6;
+      }
+      
+      // Add medications section
+      if (prescriptionData.medications && prescriptionData.medications.length > 0) {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Medications:', margin, currentY);
+        currentY += 6;
+        
+        // Create table header
+        pdf.setFillColor(230, 230, 230);
+        pdf.rect(margin, currentY, pageWidth - (margin * 2), 6, 'F');
+        
+        pdf.setFontSize(8.5);
+        pdf.text('Medication', margin + 2, currentY + 4);
+        pdf.text('Dosage', margin + 50, currentY + 4);
+        pdf.text('Frequency', margin + 80, currentY + 4);
+        pdf.text('Duration', margin + 120, currentY + 4);
+        
+        currentY += 6;
+        
+        // Add medication rows
+        prescriptionData.medications.forEach((med, index) => {
+          const rowHeight = 6;
+          
+          if (index % 2 === 0) {
+            pdf.setFillColor(245, 245, 245);
+            pdf.rect(margin, currentY, pageWidth - (margin * 2), rowHeight, 'F');
+          }
+          
+          pdf.setFontSize(8.5);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(med.name, margin + 2, currentY + 4);
+          pdf.text(med.dosage, margin + 50, currentY + 4);
+          pdf.text(med.frequency, margin + 80, currentY + 4);
+          pdf.text(med.duration, margin + 120, currentY + 4);
+          
+          currentY += rowHeight;
+        });
+        
+        // Add instructions
+        currentY += 6;
+        prescriptionData.medications.forEach((med) => {
+          if (med.instructions) {
+            pdf.setFontSize(8);
+            const instText = `${med.name}: ${med.instructions}`;
+            const splitInst = pdf.splitTextToSize(instText, pageWidth - (margin * 2));
+            pdf.text(splitInst, margin, currentY);
+            currentY += (splitInst.length * 3.5) + 1;
+          }
+        });
+      }
+      
+      // Add signature section
+      currentY = Math.max(currentY + 20, pageHeight - 30);
+      
+      pdf.setDrawColor(100, 100, 100);
+      pdf.line(pageWidth - margin - 50, currentY, pageWidth - margin, currentY);
+      
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`${profile?.name || "Dr. Sarah Johnson"}`, pageWidth - margin - 25, currentY + 5, { align: 'center' });
+      pdf.setFontSize(8);
+      pdf.text('Signature', pageWidth - margin - 25, currentY + 9, { align: 'center' });
       
       // Create PDF URL for sharing
       const pdfBlob = pdf.output('blob');
@@ -210,8 +311,21 @@ const Prescription = () => {
       message += `*Patient:* ${prescriptionData.patientInfo.name}\n`;
       message += `*Age/Gender:* ${prescriptionData.patientInfo.age}/${prescriptionData.patientInfo.gender}\n\n`;
       
-      // Add note that PDF is attached/shared
-      message += `Please find the attached prescription PDF or download it from the provided link.\n\n`;
+      // Add medications
+      if (prescriptionData.medications && prescriptionData.medications.length > 0) {
+        message += "*Medications:*\n";
+        prescriptionData.medications.forEach((med, idx) => {
+          message += `${idx + 1}. ${med.name} - ${med.dosage} (${med.frequency}) for ${med.duration}\n`;
+          if (med.instructions) {
+            message += `   → ${med.instructions}\n`;
+          }
+        });
+      }
+      
+      // Add doctor's notes if available
+      if (prescriptionData.prescriptionText) {
+        message += `\n*Notes:* ${prescriptionData.prescriptionText}\n\n`;
+      }
       
       // Encode the message for the URL
       const encodedMessage = encodeURIComponent(message);
