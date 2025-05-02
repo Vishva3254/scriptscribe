@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -55,7 +54,8 @@ const convertToMedicationArray = (medications: Json | null): Medication[] | null
     'instructions' in med
   );
   
-  return isValidMedicationArray ? medications as Medication[] : null;
+  // We need a proper type assertion here - first cast to unknown, then to Medication[]
+  return isValidMedicationArray ? (medications as unknown) as Medication[] : null;
 };
 
 const SavedPrescriptions = () => {
