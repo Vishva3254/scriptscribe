@@ -38,7 +38,7 @@ interface SavedPrescription {
 }
 
 // Type guard function to validate if the Json value is a valid Medication array
-const isMedicationArray = (medications: Json | null): medications is Medication[] => {
+const isMedicationArray = (medications: Json | null): medications is any => {
   if (!medications || !Array.isArray(medications)) {
     return false;
   }
@@ -106,7 +106,7 @@ const SavedPrescriptions = () => {
           patient_gender: item.patient_gender,
           patient_contact: item.patient_contact,
           prescription_text: item.prescription_text,
-          medications: isMedicationArray(item.medications) ? item.medications : null,
+          medications: isMedicationArray(item.medications) ? item.medications as Medication[] : null,
           created_at: item.created_at
         }));
         
