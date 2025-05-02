@@ -13,8 +13,19 @@ import { FileText, Search, Eye, Plus, Calendar, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
 
-// Define the prescription type
+// Define the medication type
+interface Medication {
+  id: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions: string;
+}
+
+// Define the prescription type with proper typing for medications
 interface SavedPrescription {
   id: string;
   patient_name: string;
@@ -22,16 +33,27 @@ interface SavedPrescription {
   patient_gender: string | null;
   patient_contact: string | null;
   prescription_text: string | null;
-  medications: Array<{
-    id: string;
-    name: string;
-    dosage: string;
-    frequency: string;
-    duration: string;
-    instructions: string;
-  }> | null;
+  medications: Medication[] | null;
   created_at: string;
 }
+
+// Type guard function to validate if the Json value is a valid Medication array
+const isMedicationArray = (medications: Json | null): medications is Medication[] => {
+  if (!medications || !Array.isArray(medications)) {
+    return false;
+  }
+  
+  return medications.every(med => 
+    typeof med === 'object' && 
+    med !== null && 
+    'id' in med &&
+    'name' in med &&
+    'dosage' in med &&
+    'frequency' in med &&
+    'duration' in med &&
+    'instructions' in med
+  );
+};
 
 const SavedPrescriptions = () => {
   const navigate = useNavigate();
@@ -76,8 +98,20 @@ const SavedPrescriptions = () => {
       }
 
       if (data) {
-        setPrescriptions(data);
-        setFilteredPrescriptions(data);
+        // Transform the data to match our SavedPrescription type
+        const typedPrescriptions: SavedPrescription[] = data.map(item => ({
+          id: item.id,
+          patient_name: item.patient_name,
+          patient_age: item.patient_age,
+          patient_gender: item.patient_gender,
+          patient_contact: item.patient_contact,
+          prescription_text: item.prescription_text,
+          medications: isMedicationArray(item.medications) ? item.medications : null,
+          created_at: item.created_at
+        }));
+        
+        setPrescriptions(typedPrescriptions);
+        setFilteredPrescriptions(typedPrescriptions);
       }
     } catch (error: any) {
       console.error('Error fetching prescriptions:', error);
