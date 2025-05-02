@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -35,6 +34,51 @@ const Index = () => {
     duration: string;
     instructions: string;
   }>>([]);
+
+  // Store the last saved prescription data to prevent duplicate saves
+  const [lastSavedPrescriptionData, setLastSavedPrescriptionData] = useState({
+    patientName: '',
+    prescriptionText: '',
+    medicationsHash: '',
+    timestamp: 0
+  });
+
+  // Time window in milliseconds within which duplicate saves are prevented (3 seconds)
+  const DUPLICATE_PREVENTION_WINDOW = 3000;
+
+  // Function to calculate a simple hash of medications array for comparison
+  const getMedicationsHash = (meds: typeof medications) => {
+    return JSON.stringify(meds.map(m => ({ 
+      name: m.name, 
+      dosage: m.dosage,
+      frequency: m.frequency,
+      duration: m.duration,
+      instructions: m.instructions
+    })));
+  };
+
+  // Check if current prescription is duplicate of recently saved one
+  const isDuplicateSave = () => {
+    const now = Date.now();
+    const medicationsHash = getMedicationsHash(medications);
+    
+    return (
+      patientInfo.name === lastSavedPrescriptionData.patientName &&
+      prescriptionText === lastSavedPrescriptionData.prescriptionText &&
+      medicationsHash === lastSavedPrescriptionData.medicationsHash &&
+      now - lastSavedPrescriptionData.timestamp < DUPLICATE_PREVENTION_WINDOW
+    );
+  };
+
+  // Update the last saved prescription data
+  const updateLastSavedData = () => {
+    setLastSavedPrescriptionData({
+      patientName: patientInfo.name,
+      prescriptionText: prescriptionText,
+      medicationsHash: getMedicationsHash(medications),
+      timestamp: Date.now()
+    });
+  };
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -133,12 +177,18 @@ const Index = () => {
       });
     }
     
+    // Copy to clipboard regardless of duplicate status
     navigator.clipboard.writeText(fullPrescription);
     
-    toast({
-      title: "Prescription Generated!",
-      description: "The complete prescription has been copied to your clipboard."
-    });
+    // Check if it's a duplicate save request
+    if (!isDuplicateSave()) {
+      updateLastSavedData();
+      
+      toast({
+        title: "Prescription Generated!",
+        description: "The complete prescription has been copied to your clipboard."
+      });
+    }
   };
 
   const savePrescription = async () => {
@@ -161,6 +211,15 @@ const Index = () => {
       return;
     }
 
+    // Check if this is a duplicate save within the time window
+    if (isDuplicateSave()) {
+      toast({
+        title: "Already Saved",
+        description: "This prescription was already saved moments ago."
+      });
+      return;
+    }
+
     setSavingPrescription(true);
     try {
       const { error } = await supabase.from('prescriptions').insert({
@@ -177,6 +236,9 @@ const Index = () => {
         throw error;
       }
 
+      // Update last saved data
+      updateLastSavedData();
+      
       toast({
         title: "Prescription Saved",
         description: "The prescription has been saved successfully."
@@ -211,6 +273,12 @@ const Index = () => {
         variant: "destructive"
       });
       return;
+    }
+    
+    // Check if it's a duplicate request
+    if (!isDuplicateSave()) {
+      // Update last saved data
+      updateLastSavedData();
     }
     
     navigate('/prescription', { 

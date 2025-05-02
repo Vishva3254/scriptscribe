@@ -12,6 +12,15 @@ interface SpeechToTextCardProps {
   prescriptionText: string;
 }
 
+// Store the last saved prescription timestamp to prevent duplicate saves
+let lastSavedPrescription = {
+  text: '',
+  timestamp: 0
+};
+
+// Time window in milliseconds within which duplicate saves are prevented (3 seconds)
+const DUPLICATE_PREVENTION_WINDOW = 3000;
+
 const SpeechToTextCard: React.FC<SpeechToTextCardProps> = ({ updatePrescriptionText, prescriptionText }) => {
   const { toast } = useToast();
   const [localText, setLocalText] = useState(prescriptionText);
@@ -54,11 +63,31 @@ const SpeechToTextCard: React.FC<SpeechToTextCardProps> = ({ updatePrescriptionT
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(localText);
-    toast({
-      title: "Copied to clipboard",
-      description: "Prescription text has been copied to clipboard."
-    });
+    // If the same content was copied recently, don't show another toast
+    const now = Date.now();
+    const isDuplicate = 
+      localText === lastSavedPrescription.text && 
+      now - lastSavedPrescription.timestamp < DUPLICATE_PREVENTION_WINDOW;
+    
+    if (!isDuplicate) {
+      // Update the last saved prescription info
+      lastSavedPrescription = {
+        text: localText,
+        timestamp: now
+      };
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(localText);
+      
+      // Show toast
+      toast({
+        title: "Copied to clipboard",
+        description: "Prescription text has been copied to clipboard."
+      });
+    } else {
+      // Already copied recently, just copy silently
+      navigator.clipboard.writeText(localText);
+    }
   };
 
   return (
