@@ -37,13 +37,14 @@ interface SavedPrescription {
   created_at: string;
 }
 
-// Type guard function to validate if the Json value is a valid Medication array
-const isMedicationArray = (medications: Json | null): medications is any => {
+// Helper function to safely convert Json to Medication[]
+const convertToMedicationArray = (medications: Json | null): Medication[] | null => {
   if (!medications || !Array.isArray(medications)) {
-    return false;
+    return null;
   }
   
-  return medications.every(med => 
+  // Check if array elements have the expected Medication properties
+  const isValidMedicationArray = medications.every(med => 
     typeof med === 'object' && 
     med !== null && 
     'id' in med &&
@@ -53,6 +54,8 @@ const isMedicationArray = (medications: Json | null): medications is any => {
     'duration' in med &&
     'instructions' in med
   );
+  
+  return isValidMedicationArray ? medications as Medication[] : null;
 };
 
 const SavedPrescriptions = () => {
@@ -106,7 +109,7 @@ const SavedPrescriptions = () => {
           patient_gender: item.patient_gender,
           patient_contact: item.patient_contact,
           prescription_text: item.prescription_text,
-          medications: isMedicationArray(item.medications) ? item.medications as Medication[] : null,
+          medications: convertToMedicationArray(item.medications),
           created_at: item.created_at
         }));
         
