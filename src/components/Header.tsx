@@ -1,154 +1,190 @@
 
-import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Menu, UserRound, LogOut, Settings } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import React, { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { FileText, Menu, X, User, LogOut, Settings, FilePlus, Archive } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
-const Header: React.FC = () => {
-  const isMobile = useIsMobile();
+const Header = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, signOut, isLoading } = useAuth();
-  
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
-  
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(part => part.charAt(0))
-      .join('')
-      .toUpperCase();
+  const { user, signOut, profile } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: 'Successfully signed out',
+        description: 'Come back soon!',
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: 'Sign out failed',
+        description: 'There was a problem signing you out.',
+        variant: 'destructive',
+      });
+    }
   };
-  
+
+  // Navigation items when logged in
+  const navItems = [
+    { path: '/', label: 'New Prescription', icon: FilePlus },
+    { path: '/saved-prescriptions', label: 'Saved Prescriptions', icon: Archive },
+    { path: '/profile', label: 'Profile', icon: Settings },
+  ];
+
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-10 w-full">
-      <div className="container mx-auto px-3 py-2">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center">
-            <div className="flex-shrink-0">
-              <FileText className="h-5 w-5 text-medical-500" />
+    <header className="bg-white border-b">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2">
+          <div className="p-1 bg-medical-50 rounded-md">
+            <FileText className="h-6 w-6 text-medical-600" />
+          </div>
+          <span className="font-medium text-gray-800 text-lg hidden sm:inline">ScriptScribe</span>
+        </Link>
+
+        {/* Desktop Navigation */}
+        {user && (
+          <nav className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Button
+                  key={item.path}
+                  variant={location.pathname === item.path ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => navigate(item.path)}
+                  className={`flex items-center ${location.pathname === item.path ? 'bg-medical-50 text-medical-700' : ''}`}
+                >
+                  <Icon className="mr-1.5 h-4 w-4" />
+                  {item.label}
+                </Button>
+              );
+            })}
+          </nav>
+        )}
+
+        {/* User Menu (Desktop) */}
+        {user ? (
+          <div className="hidden md:flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={profile?.profilePic || ''} />
+                <AvatarFallback className="bg-medical-100 text-medical-800">
+                  {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="hidden lg:block text-right">
+                <p className="text-sm font-medium leading-none">{profile?.name || 'User'}</p>
+                <p className="text-xs text-gray-500 leading-tight">{profile?.email || user.email}</p>
+              </div>
             </div>
-            <div className="ml-2">
-              <h1 className="text-sm font-semibold text-gray-900">ScriptScribe</h1>
-              <p className="text-xs text-gray-500 hidden xs:block">Voice-to-Text</p>
-            </div>
-          </Link>
-          
-          {isMobile ? (
-            <Sheet>
-              <SheetTrigger asChild>
-                <button className="p-1 rounded-md hover:bg-gray-100 focus:outline-none">
-                  <Menu size={16} />
-                  <span className="sr-only">Menu</span>
-                </button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[250px] p-0">
-                <nav className="h-full flex flex-col">
-                  <div className="p-3 border-b">
-                    <div className="flex items-center">
-                      <FileText className="h-4 w-4 text-medical-500 mr-2" />
-                      <span className="font-medium text-sm">ScriptScribe</span>
-                    </div>
+            <Button size="sm" variant="outline" className="text-red-500" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-1" />
+              Sign Out
+            </Button>
+          </div>
+        ) : (
+          <div className="hidden md:block">
+            <Button size="sm" onClick={() => navigate('/login')}>Sign In</Button>
+          </div>
+        )}
+
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="md:hidden p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+          aria-label="Toggle menu"
+        >
+          {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="md:hidden absolute top-14 left-0 right-0 bg-white z-50 border-b shadow-sm">
+          <div className="p-3 space-y-3">
+            {user ? (
+              <>
+                <div className="p-2 flex items-center gap-3 border-b pb-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={profile?.profilePic || ''} />
+                    <AvatarFallback className="bg-medical-100 text-medical-800">
+                      {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{profile?.name || 'User'}</p>
+                    <p className="text-xs text-gray-500">{profile?.email || user.email}</p>
                   </div>
-                  <div className="flex-1 overflow-auto py-2">
-                    <Link to="/" className="block px-3 py-2.5 hover:bg-gray-100">
-                      <span className="text-sm font-medium text-gray-700">Prescriptions</span>
-                    </Link>
-                    {!user ? (
-                      !isAuthPage && (
-                        <>
-                          <Link to="/login" className="block px-3 py-2.5 hover:bg-gray-100">
-                            <span className="text-sm text-gray-700">Login</span>
-                          </Link>
-                          <Link to="/signup" className="block px-3 py-2.5 hover:bg-gray-100">
-                            <span className="text-sm text-gray-700">Sign Up</span>
-                          </Link>
-                        </>
-                      )
-                    ) : (
-                      <>
-                        <div className="block px-3 py-2.5">
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="h-6 w-6">
-                              {profile?.profilePic ? (
-                                <AvatarImage src={profile.profilePic} alt={profile.name} />
-                              ) : (
-                                <AvatarFallback className="bg-medical-100 text-medical-800 text-xs">
-                                  {getInitials(profile?.name || 'User')}
-                                </AvatarFallback>
-                              )}
-                            </Avatar>
-                            <span className="text-sm font-medium">{profile?.name}</span>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">{profile?.clinicName}</div>
-                        </div>
-                        <Link to="/profile" className="flex items-center w-full text-left px-3 py-2.5 hover:bg-gray-100">
-                          <Settings className="h-3.5 w-3.5 mr-2 text-gray-500" />
-                          <span className="text-sm text-gray-700">My Profile</span>
-                        </Link>
-                        <button 
-                          onClick={() => signOut()}
-                          className="flex items-center w-full text-left px-3 py-2.5 hover:bg-gray-100"
-                          disabled={isLoading}
-                        >
-                          <LogOut className="h-3.5 w-3.5 mr-2 text-gray-500" />
-                          <span className="text-sm text-gray-700">Logout</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </nav>
-              </SheetContent>
-            </Sheet>
-          ) : (
-            <div className="hidden md:flex items-center gap-4">
-              {!user ? (
-                !isAuthPage && (
-                  <>
-                    <Link to="/login">
-                      <Button variant="ghost" size="sm" className="text-sm">Login</Button>
-                    </Link>
-                    <Link to="/signup">
-                      <Button size="sm" className="text-sm">Sign Up</Button>
-                    </Link>
-                  </>
-                )
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="text-right hidden sm:block">
-                    <div className="text-sm font-medium">{profile?.name}</div>
-                    <div className="text-xs text-gray-500">{profile?.clinicName}</div>
-                  </div>
-                  <Link to="/profile">
-                    <Avatar className="h-8 w-8 cursor-pointer">
-                      {profile?.profilePic ? (
-                        <AvatarImage src={profile.profilePic} alt={profile.name} />
-                      ) : (
-                        <AvatarFallback className="bg-medical-100 text-medical-800 text-xs">
-                          {getInitials(profile?.name || 'User')}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                  </Link>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-sm flex items-center gap-1"
-                    onClick={() => signOut()}
-                    disabled={isLoading}
+                </div>
+                
+                {/* Nav Items */}
+                <div className="space-y-1">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Button
+                        key={item.path}
+                        variant={location.pathname === item.path ? "secondary" : "ghost"}
+                        className={`w-full justify-start ${location.pathname === item.path ? 'bg-medical-50 text-medical-700' : ''}`}
+                        onClick={() => {
+                          navigate(item.path);
+                          setIsMenuOpen(false);
+                        }}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        {item.label}
+                      </Button>
+                    );
+                  })}
+                  
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-red-500 mt-2"
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMenuOpen(false);
+                    }}
                   >
-                    <LogOut size={14} />
-                    <span>Logout</span>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
                   </Button>
                 </div>
-              )}
-            </div>
-          )}
+              </>
+            ) : (
+              <div className="space-y-2">
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    navigate('/login');
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Sign In
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    navigate('/signup');
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  Sign Up
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </header>
   );
 };

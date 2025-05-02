@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -7,9 +8,10 @@ import SpeechToTextCard from '@/components/SpeechToTextCard';
 import MedicationCard from '@/components/MedicationCard';
 import LoadingScreen from '@/components/LoadingScreen';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, LogIn } from 'lucide-react';
+import { FileText, Download, LogIn, Save, Archive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -23,6 +25,7 @@ const Index = () => {
   });
 
   const [prescriptionText, setPrescriptionText] = useState('');
+  const [savingPrescription, setSavingPrescription] = useState(false);
   
   const [medications, setMedications] = useState<Array<{
     id: string;
@@ -138,6 +141,58 @@ const Index = () => {
     });
   };
 
+  const savePrescription = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to save prescriptions.",
+        variant: "destructive"
+      });
+      navigate('/login');
+      return;
+    }
+
+    if (!patientInfo.name) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide at least the patient's name to save the prescription.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSavingPrescription(true);
+    try {
+      const { error } = await supabase.from('prescriptions').insert({
+        user_id: user.id,
+        patient_name: patientInfo.name,
+        patient_age: patientInfo.age || null,
+        patient_gender: patientInfo.gender || null,
+        patient_contact: patientInfo.contactNumber || null,
+        prescription_text: prescriptionText || null,
+        medications: medications.length > 0 ? medications : null,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Prescription Saved",
+        description: "The prescription has been saved successfully."
+      });
+    } catch (error: any) {
+      console.error('Error saving prescription:', error);
+      toast({
+        title: "Save Failed",
+        description: error.message || "There was an error saving your prescription.",
+        variant: "destructive"
+      });
+    } finally {
+      setSavingPrescription(false);
+    }
+  };
+
   const viewPrescription = () => {
     if (!user) {
       toast({
@@ -168,6 +223,10 @@ const Index = () => {
         } 
       }
     });
+  };
+
+  const viewSavedPrescriptions = () => {
+    navigate('/saved-prescriptions');
   };
 
   if (isLoading) {
@@ -205,7 +264,19 @@ const Index = () => {
       
       <main className="flex-grow w-full px-3 py-3">
         <div className="w-full max-w-4xl mx-auto">
-          <h2 className="text-base font-bold text-gray-800 mb-3">Create Prescription</h2>
+          <div className="flex flex-wrap justify-between items-center mb-3 gap-2">
+            <h2 className="text-base font-bold text-gray-800">Create Prescription</h2>
+            
+            <Button 
+              onClick={viewSavedPrescriptions} 
+              variant="outline" 
+              size="sm" 
+              className="text-xs flex-shrink-0"
+            >
+              <Archive className="mr-1.5 h-3.5 w-3.5" />
+              Saved Prescriptions
+            </Button>
+          </div>
           
           <PatientInfoCard 
             updatePatientInfo={updatePatientInfo}
@@ -228,6 +299,16 @@ const Index = () => {
             <Button onClick={generatePrescription} size="sm" className="text-sm flex-shrink-0">
               <FileText className="mr-1.5 h-3.5 w-3.5" />
               Copy to Clipboard
+            </Button>
+            <Button 
+              onClick={savePrescription} 
+              variant="outline" 
+              size="sm" 
+              className="text-sm flex-shrink-0"
+              disabled={savingPrescription}
+            >
+              <Save className="mr-1.5 h-3.5 w-3.5" />
+              {savingPrescription ? 'Saving...' : 'Save Prescription'}
             </Button>
             <Button 
               onClick={viewPrescription} 

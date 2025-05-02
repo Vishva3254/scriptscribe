@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Prescription from "./pages/Prescription";
+import SavedPrescriptions from "./pages/SavedPrescriptions";
 import DoctorProfile from "./pages/DoctorProfile";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./contexts/AuthContext";
@@ -83,6 +85,11 @@ const AppRoutes = () => {
       <Route path="/prescription" element={
         <ProtectedRoute>
           <Prescription />
+        </ProtectedRoute>
+      } />
+      <Route path="/saved-prescriptions" element={
+        <ProtectedRoute>
+          <SavedPrescriptions />
         </ProtectedRoute>
       } />
       <Route path="/profile" element={
